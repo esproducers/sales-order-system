@@ -17,81 +17,239 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg)',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: '3px solid var(--primary-mid)',
+              borderTop: '3px solid var(--primary)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <p style={{ color: '#6b7280' }}>Loading…</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-indigo-600">SalesOrderPro</h1>
-            <div className="space-x-4">
-              <Link 
-                href="/login" 
-                className="px-4 py-2 text-indigo-600 hover:text-indigo-800 font-medium"
-              >
-                Login
-              </Link>
-              <Link 
-                href="/register" 
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-              >
-                Sign Up
-              </Link>
-            </div>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 70% 0%, #c5eed8 0%, #e8f8f3 40%, #f0faf7 100%)',
+      }}
+    >
+      {/* Nav */}
+      <nav
+        style={{
+          background: '#fff',
+          borderBottom: '1px solid #e5e5e5',
+          padding: '0 32px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: 64,
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: '1.4rem',
+              color: 'var(--primary)',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            SalesOrder<span style={{ color: 'var(--primary-dark)' }}>Pro</span>
+          </span>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Link
+              href="/login"
+              style={{
+                padding: '8px 20px',
+                color: 'var(--primary-dark)',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+                borderRadius: 8,
+                border: '1.5px solid var(--primary-mid)',
+              }}
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              style={{
+                padding: '8px 20px',
+                background: 'var(--primary)',
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+                borderRadius: 8,
+              }}
+            >
+              Sign Up
+            </Link>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Streamline Your Sales Order Management
+      {/* Hero */}
+      <main>
+        <div
+          style={{
+            maxWidth: 780,
+            margin: '0 auto',
+            padding: '80px 24px 60px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-block',
+              background: 'var(--primary-light)',
+              color: 'var(--primary-dark)',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              padding: '5px 14px',
+              borderRadius: 20,
+              marginBottom: 20,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Sales Order Management System
+          </div>
+          <h1
+            style={{
+              fontSize: 'clamp(2rem, 5vw, 3.2rem)',
+              fontWeight: 800,
+              lineHeight: 1.15,
+              color: '#111827',
+              marginBottom: 20,
+            }}
+          >
+            Streamline Your{' '}
+            <span style={{ color: 'var(--primary)' }}>Sales Order</span> Management
           </h1>
-          <p className="text-xl text-gray-600 mb-10">
-            A complete solution for agents to manage clients, track orders, and calculate commissions effortlessly.
+          <p
+            style={{
+              fontSize: '1.05rem',
+              color: '#6b7280',
+              lineHeight: 1.7,
+              marginBottom: 36,
+              maxWidth: 560,
+              margin: '0 auto 36px',
+            }}
+          >
+            A complete solution for agents to manage clients, track orders, and calculate
+            commissions effortlessly.
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Link 
-              href="/register" 
-              className="px-8 py-3 bg-indigo-600 text-white text-lg font-semibold rounded-lg hover:bg-indigo-700 transition duration-300"
+
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link
+              href="/register"
+              style={{
+                padding: '13px 32px',
+                background: 'var(--primary)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '1rem',
+                textDecoration: 'none',
+                borderRadius: 10,
+                boxShadow: '0 4px 16px rgba(46,189,142,0.35)',
+              }}
             >
               Start Free Trial
             </Link>
-            <Link 
-              href="/login" 
-              className="px-8 py-3 border-2 border-indigo-600 text-indigo-600 text-lg font-semibold rounded-lg hover:bg-indigo-50 transition duration-300"
+            <Link
+              href="/login"
+              style={{
+                padding: '13px 32px',
+                border: '2px solid var(--primary)',
+                color: 'var(--primary-dark)',
+                fontWeight: 700,
+                fontSize: '1rem',
+                textDecoration: 'none',
+                borderRadius: 10,
+                background: '#fff',
+              }}
             >
               Demo Login
             </Link>
           </div>
+        </div>
 
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <div className="text-4xl mb-4">📋</div>
-              <h3 className="text-xl font-bold mb-2">Order Management</h3>
-              <p className="text-gray-600">Create, track, and manage customer orders with ease</p>
+        {/* Feature cards */}
+        <div
+          style={{
+            maxWidth: 1000,
+            margin: '0 auto 80px',
+            padding: '0 24px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 20,
+          }}
+        >
+          {[
+            { icon: '📋', title: 'Order Management', desc: 'Create, track, and manage customer orders with ease' },
+            { icon: '👥', title: 'Client Database', desc: 'Store and access all client information in one place' },
+            { icon: '💰', title: 'Commission Tracking', desc: 'Automatically calculate commissions for each agent' },
+          ].map((f) => (
+            <div
+              key={f.title}
+              style={{
+                background: '#fff',
+                borderRadius: 16,
+                padding: '28px 24px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                border: '1px solid var(--primary-mid)',
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 12,
+                  background: 'var(--primary-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.6rem',
+                  marginBottom: 16,
+                }}
+              >
+                {f.icon}
+              </div>
+              <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8 }}>{f.title}</h3>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: 1.6, margin: 0 }}>
+                {f.desc}
+              </p>
             </div>
-            
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <div className="text-4xl mb-4">👥</div>
-              <h3 className="text-xl font-bold mb-2">Client Database</h3>
-              <p className="text-gray-600">Store and access all client information in one place</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-xl shadow-lg">
-              <div className="text-4xl mb-4">💰</div>
-              <h3 className="text-xl font-bold mb-2">Commission Tracking</h3>
-              <p className="text-gray-600">Automatically calculate commissions for each agent</p>
-            </div>
-          </div>
+          ))}
         </div>
       </main>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

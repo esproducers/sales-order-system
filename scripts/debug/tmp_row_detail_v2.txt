@@ -1,0 +1,29 @@
+Header Row (Row 0):
+["Product Name","Unit per Carton","Retail Price per unit (RM)","Retail Price per CTN (RM)","wholesale Price per unit (RM) ","wholesalel Price per CTN (RM)","photo"]
+
+First Data Row (Row 1):
+  Col 0: "OhMAMA Kicap Manis | Sweet Soy Sauce | Berat  325ml | HALAL Product" (string)
+  Col 1: 24 (number)
+  Col 2: 4 (number)
+  Col 3: 96 (number)
+  Col 4: 3.6 (number)
+  Col 5: 86.4 (number)
+  Col 6: "https://my-live.slatic.net/p/186866ac490e7adc3ede01db9208ee30.jpg" (string)
+  Col 7: "https://my-live.slatic.net/p/2d110dfb3e98a01277ba504bf37ac14f.png" (string)
+  Col 8: "https://my-live.slatic.net/p/1206efa81db31972bef05e0fb4a6c599.jpg" (string)
+  Col 9: "https://my-live.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)
+  Col 10: "https://my-live.slatic.net/p/ebc7a35dfe48027038f27ffb3bcc9159.jpg" (string)
+  Col 14: "https://my-live-02.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)
+
+Second Data Row (Row 2):
+  Col 0: "OhMAMA Cuka | Vinegar | Berat 325ml | HALAL Product" (string)
+  Col 1: 24 (number)
+  Col 2: 2.6 (number)
+  Col 3: 62.400000000000006 (number)
+  Col 4: 2.3 (number)
+  Col 5: 55.199999999999996 (number)
+  Col 6: "https://my-live.slatic.net/p/9e1dd7a99e3027e925507ab3eaada2e4.jpg" (string)
+  Col 7: "https://my-live.slatic.net/p/785ec8be39c6786406248e90ed98597a.png" (string)
+  Col 8: "https://my-live.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)
+  Col 9: "https://my-live.slatic.net/p/ebc7a35dfe48027038f27ffb3bcc9159.jpg" (string)
+  Col 14: "https://my-live-02.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)

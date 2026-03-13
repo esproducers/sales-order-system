@@ -1,0 +1,43 @@
+{
+  "users": [
+    {
+      "id": "c37a25c6-c3fd-454a-9998-55de1a30684f",
+      "email": "ohmamaeshop@gmail.com"
+    },
+    {
+      "id": "de7d8891-bf5c-4cac-861b-07acf1d53747",
+      "email": "es.servicesdept@gmail.com"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "353b2a26-7344-49ce-9330-8ff37646ac6d",
+      "user_id": "c37a25c6-c3fd-454a-9998-55de1a30684f",
+      "name": "ohmamaeshop",
+      "email": "ohmamaeshop@gmail.com",
+      "phone": null,
+      "role": "admin",
+      "commission_rate": 5,
+      "created_at": "2026-03-04T16:08:17.401472+00:00",
+      "updated_at": "2026-03-04T16:08:17.401472+00:00"
+    }
+  ],
+  "clients": [
+    {
+      "id": "465e50be-b912-4ffb-bd28-2df68f15c9ea",
+      "company_name": "es producer sdn bhd",
+      "ssm_id": "141958x",
+      "tin_id": "tin-123548",
+      "address": "16 jln sepakt tmn sepakt",
+      "company_phone": "+60167282933",
+      "contact_phone": "",
+      "ssm_file_url": null,
+      "agent_id": "353b2a26-7344-49ce-9330-8ff37646ac6d",
+      "created_at": "2026-03-04T15:52:32.483437+00:00",
+      "updated_at": "2026-03-04T15:52:32.483437+00:00"
+    }
+  ],
+  "products": {
+    "error": "Could not find the table 'public.products' in the schema cache"
+  }
+}

@@ -5,259 +5,160 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import Sidebar from '@/components/Sidebar'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { updateClientStatusAdmin, getClientsAdmin } from '@/actions/clients'
 
 export default function ClientsPage() {
   const { profile } = useAuth()
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
-    if (profile) {
+    if (profile?.id) {
       loadClients()
+    } else if (profile === null) {
+      setLoading(false)
     }
   }, [profile])
 
   const loadClients = async () => {
+    if (!profile?.id) return
     try {
       setLoading(true)
-      
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('agent_id', profile.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const { data, error } = await getClientsAdmin(profile.id)
+      if (error) throw new Error(error)
       setClients(data || [])
-    } catch (error: any) {
-      console.error('Error loading clients:', error)
-      toast.error('Failed to load clients')
+    } catch (err: any) {
+      toast.error('Failed to load clients: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (clientId: string) => {
-    if (!confirm('Are you sure you want to delete this client? This will also delete all their orders.')) {
-      return
-    }
-
+  const handleToggleActive = async (client: any, currentActive: boolean) => {
+    const action = currentActive ? 'Deactivate' : 'Reactivate'
+    if (!confirm(`${action} this client?`)) return
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', clientId)
-        .eq('agent_id', profile.id)
-
-      if (error) throw error
-
-      toast.success('Client deleted successfully')
+      setLoading(true)
+      const { error } = await updateClientStatusAdmin(client.id, !currentActive)
+      if (error) throw new Error(typeof error === 'string' ? error : error.message)
+      toast.success(`Client ${currentActive ? 'deactivated' : 'reactivated'}`)
       loadClients()
-    } catch (error: any) {
-      console.error('Error deleting client:', error)
-      toast.error('Failed to delete client')
+    } catch (err: any) {
+      toast.error('Failed: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const filteredClients = clients.filter(client =>
-    client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.ssm_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.contact_phone?.includes(searchTerm)
-  )
+  const monthsList = Array.from(new Set(clients.map(c => format(c.created_at ? new Date(c.created_at) : new Date(), 'MMMM yyyy'))))
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+
+  const filtered = clients.filter(c => {
+    const joinDate = c.created_at ? new Date(c.created_at) : new Date()
+    const monthName = format(joinDate, 'MMMM yyyy')
+    const matchesMonth = selectedMonths.length === 0 || selectedMonths.includes(monthName)
+
+    let matchesDate = true
+    if (dateFrom) matchesDate = matchesDate && joinDate >= new Date(dateFrom)
+    if (dateTo) {
+      const toDateEnd = new Date(dateTo)
+      toDateEnd.setHours(23, 59, 59, 999)
+      matchesDate = matchesDate && joinDate <= toDateEnd
+    }
+
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = !searchTerm ||
+      c.company_name?.toLowerCase().includes(searchLower) ||
+      c.ssm_id?.toLowerCase().includes(searchLower) ||
+      c.contact_phone?.toLowerCase().includes(searchLower)
+
+    return matchesMonth && matchesDate && matchesSearch
+  })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Clients</h1>
-            <p className="text-gray-600 mt-2">Manage your client database</p>
-          </div>
-          
-          <div className="mt-4 sm:mt-0 flex space-x-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <div className="absolute left-3 top-2.5 text-gray-400">
-                🔍
-              </div>
+
+      <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+        <Sidebar />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>My Client</h1>
+              <p style={{ color: '#6b7280', marginTop: 6, fontSize: '1.1rem' }}>Manage your client database</p>
             </div>
-            
-            <Link
-              href="/clients/new"
-              className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
-            >
-              + Add Client
+            <Link href="/clients/new" style={{ padding: '12px 28px', background: 'var(--primary)', color: '#fff', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: '1rem', boxShadow: '0 4px 12px rgba(46,189,142,0.2)' }}>
+              + New Client
             </Link>
           </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Clients</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{clients.length}</p>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Search Company / SSM</label>
+                <input type="text" placeholder="e.g. Acme Corp" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem' }} />
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-2xl">🏢</span>
+              <div style={{ flex: '1 1 200px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Filter Join Month</label>
+                <select value="" onChange={(e) => { if (e.target.value && !selectedMonths.includes(e.target.value)) setSelectedMonths([...selectedMonths, e.target.value]); }} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem', cursor: 'pointer', appearance: 'none' }}>
+                  <option value="">+ Add Month...</option>
+                  {monthsList.filter(m => !selectedMonths.includes(m)).map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">SSM Registered</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {clients.filter(c => c.ssm_id).length}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <span className="text-2xl">📄</span>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Total Clients</p>
+              <p style={{ fontSize: '1.8rem', fontWeight: 800, margin: '4px 0 0' }}>{clients.length}</p>
+            </div>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>Active Clients</p>
+              <p style={{ fontSize: '1.8rem', fontWeight: 800, margin: '4px 0 0', color: 'var(--primary-dark)' }}>{clients.filter(c => !c.company_name?.startsWith('(INACTIVE) ')).length}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Clients</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {clients.length} {/* 这里可以添加逻辑来识别活跃客户 */}
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <span className="text-2xl">👥</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Clients Table */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              <p className="mt-2 text-gray-600">Loading clients...</p>
-            </div>
-          ) : filteredClients.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Company Info
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact Details
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Registration
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Added On
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map((client) => (
-                    <tr key={client.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">{client.company_name}</div>
-                          <div className="text-sm text-gray-500">{client.address}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-gray-900">📞 {client.company_phone}</div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            📱 {client.contact_phone}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          {client.ssm_id && (
-                            <div className="text-gray-900">SSM: {client.ssm_id}</div>
-                          )}
-                          {client.tin_id && (
-                            <div className="text-sm text-gray-500">TIN: {client.tin_id}</div>
-                          )}
-                          {client.ssm_file_url && (
-                            <a
-                              href={client.ssm_file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 mt-1"
-                            >
-                              📎 View SSM File
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-gray-900">
-                          {format(new Date(client.created_at), 'MMM d, yyyy')}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {format(new Date(client.created_at), 'h:mm a')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-3">
-                          <Link
-                            href={`/clients/${client.id}/orders`}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            View Orders
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(client.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>Loading clients…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ background: '#fff', borderRadius: 12, padding: 48, textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <p>No clients found.</p>
             </div>
           ) : (
-            <div className="p-8 text-center">
-              <div className="text-gray-400 text-6xl mb-4">👥</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm ? 'No matching clients found' : 'No clients yet'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {searchTerm 
-                  ? 'Try a different search term'
-                  : 'Start by adding your first client'
-                }
-              </p>
-              <Link
-                href="/clients/new"
-                className="inline-block px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
-              >
-                Add Your First Client
-              </Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {filtered.map((client) => {
+                const isDeactivated = client.company_name?.startsWith('(INACTIVE) ')
+                const displayName = isDeactivated ? client.company_name.replace('(INACTIVE) ', '') : client.company_name
+                return (
+                  <div key={client.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', background: isDeactivated ? '#f9fafb' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', opacity: isDeactivated ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: '50%', background: isDeactivated ? '#d1d5db' : 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.4rem', color: isDeactivated ? '#4b5563' : 'var(--primary-dark)' }}>
+                        {displayName[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '1.2rem', color: isDeactivated ? '#6b7280' : '#111827' }}>
+                          {displayName} {isDeactivated && <span style={{ fontSize: '0.7rem', background: '#eee', padding: '2px 6px', borderRadius: 4, marginLeft: 8 }}>INACTIVE</span>}
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>{client.address && `📍 ${client.address}`}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <Link href={`/clients/${client.id}/orders`} style={{ padding: '10px 18px', background: 'var(--primary)', color: '#fff', borderRadius: 10, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>Orders</Link>
+                      <button onClick={() => handleToggleActive(client, !isDeactivated)} style={{ padding: '10px 18px', background: isDeactivated ? 'var(--primary-light)' : '#fee2e2', color: isDeactivated ? 'var(--primary-dark)' : '#ef4444', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>
+                        {isDeactivated ? 'Reactivate' : 'Deactivate'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

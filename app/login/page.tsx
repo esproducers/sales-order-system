@@ -3,19 +3,16 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, resetPassword } = useAuth()
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
     try {
       await signIn(email, password)
     } catch (error) {
@@ -26,11 +23,7 @@ export default function LoginPage() {
   }
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      alert('Please enter your email address first')
-      return
-    }
-    
+    if (!email) { alert('Please enter your email first'); return }
     try {
       await resetPassword(email)
       alert('Password reset email sent! Check your inbox.')
@@ -39,48 +32,100 @@ export default function LoginPage() {
     }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '11px 14px',
+    border: '1.5px solid #d1d5db',
+    borderRadius: 8,
+    fontSize: '0.9rem',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+    boxSizing: 'border-box',
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your account</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at 70% 0%, #c5eed8 0%, #e8f8f3 40%, #f0faf7 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 20,
+          boxShadow: '0 8px 40px rgba(46,189,142,0.12)',
+          maxWidth: 440,
+          width: '100%',
+          padding: '40px 36px',
+        }}
+      >
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div
+            style={{
+              display: 'inline-block',
+              fontWeight: 800,
+              fontSize: '1.6rem',
+              color: 'var(--primary)',
+              letterSpacing: '-0.5px',
+              marginBottom: 8,
+            }}
+          >
+            SalesOrder<span style={{ color: 'var(--primary-dark)' }}>Pro</span>
+          </div>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 4px', color: '#111827' }}>
+            Welcome Back
+          </h1>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.875rem', marginBottom: 6, color: '#374151' }}>
               Email Address
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               placeholder="you@example.com"
+              style={inputStyle}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label style={{ display: 'block', fontWeight: 500, fontSize: '0.875rem', marginBottom: 6, color: '#374151' }}>
               Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               placeholder="••••••••"
+              style={inputStyle}
               required
             />
           </div>
 
-          <div className="flex items-center justify-between">
+          <div style={{ textAlign: 'right' }}>
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="text-sm text-indigo-600 hover:text-indigo-800"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary-dark)',
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                padding: 0,
+              }}
             >
               Forgot password?
             </button>
@@ -89,27 +134,44 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              width: '100%',
+              padding: '13px',
+              background: loading ? '#9ca3af' : 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.15s',
+            }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-indigo-600 font-semibold hover:text-indigo-800">
-              Sign up
-            </Link>
-          </p>
-        </div>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: '#6b7280' }}>
+          Don't have an account?{' '}
+          <Link href="/register" style={{ color: 'var(--primary-dark)', fontWeight: 600, textDecoration: 'none' }}>
+            Sign up
+          </Link>
+        </p>
 
-        <div className="mt-8 pt-8 border-t border-gray-200">
-          <p className="text-center text-gray-500 text-sm">
-            Demo credentials:<br />
-            Agent: agent@example.com / password123<br />
-            Admin: admin@example.com / admin123
-          </p>
+        <div
+          style={{
+            marginTop: 24,
+            paddingTop: 20,
+            borderTop: '1px solid #f0f0f0',
+            textAlign: 'center',
+            fontSize: '0.75rem',
+            color: '#9ca3af',
+            lineHeight: 1.8,
+          }}
+        >
+          Demo: agent@example.com / password123
+          <br />
+          Admin: admin@example.com / admin123
         </div>
       </div>
     </div>

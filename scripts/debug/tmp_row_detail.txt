@@ -1,0 +1,9 @@
+Detailed view of Row 1:
+  Col 0: "OhMAMA Kicap Manis | Sweet Soy Sauce | Berat  325ml | HALAL Product" (string)
+  Col 1: 24 (number)
+  Col 3: "https://my-live.slatic.net/p/186866ac490e7adc3ede01db9208ee30.jpg" (string)
+  Col 4: "https://my-live.slatic.net/p/2d110dfb3e98a01277ba504bf37ac14f.png" (string)
+  Col 5: "https://my-live.slatic.net/p/1206efa81db31972bef05e0fb4a6c599.jpg" (string)
+  Col 6: "https://my-live.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)
+  Col 7: "https://my-live.slatic.net/p/ebc7a35dfe48027038f27ffb3bcc9159.jpg" (string)
+  Col 11: "https://my-live-02.slatic.net/p/9cb19a5e4fa109f7f88fe72ee3df583c.jpg" (string)

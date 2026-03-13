@@ -1,24 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    // 验证API密钥
-    const apiKey = request.headers.get('x-api-key')
-    if (apiKey !== process.env.BACKUP_API_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // 初始化Supabase管理员客户端
-    const supabaseAdmin = createClient(
+    // 1. 获取当前用户的会话（使用 @supabase/ssr，Next.js 15+ 需要 await cookies()）
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY! // 需要设置服务角色密钥
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {
+            // 在 API 路由中不需要设置 cookie，留空即可
+          },
+          remove() {
+            // 同上
+          },
+        },
+      }
     )
 
-    // 1. 备份数据表
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 2. 验证用户是否为管理员（从 app_metadata 中检查）
+    if (user.app_metadata?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 })
+    }
+
+    // 3. 使用服务角色客户端执行备份（绕过 RLS）
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // 4. 备份数据表
     const tables = ['profiles', 'clients', 'orders', 'backup_history']
     const backupData: Record<string, any[]> = {}
     let totalRecords = 0
@@ -29,16 +52,16 @@ export async function POST(request: NextRequest) {
         .select('*')
 
       if (error) throw error
-      
+
       backupData[table] = data || []
       totalRecords += data?.length || 0
     }
 
-    // 2. 生成备份文件名
+    // 5. 生成备份文件名（ISO 时间转文件名安全格式）
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const backupFileName = `backup-${timestamp}.json`
 
-    // 3. 上传到Supabase存储
+    // 6. 上传到 Supabase 存储
     const { error: uploadError } = await supabaseAdmin.storage
       .from('backups')
       .upload(backupFileName, JSON.stringify(backupData, null, 2), {
@@ -48,12 +71,12 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) throw uploadError
 
-    // 4. 获取文件URL
+    // 7. 获取文件的公共 URL
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('backups')
       .getPublicUrl(backupFileName)
 
-    // 5. 记录备份历史
+    // 8. 记录备份历史
     const { error: historyError } = await supabaseAdmin
       .from('backup_history')
       .insert({
@@ -76,8 +99,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Backup error:', error)
-    
-    // 记录失败备份
+
+    // 尝试记录失败备份
     try {
       const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,11 +114,11 @@ export async function POST(request: NextRequest) {
           status: 'failed',
           record_count: 0,
         })
-    } catch {}
+    } catch { }
 
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error.message || 'Backup failed',
         timestamp: new Date().toISOString(),
       },
@@ -106,13 +129,24 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // 验证API密钥
-    const apiKey = request.headers.get('x-api-key')
-    if (apiKey !== process.env.BACKUP_API_KEY) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() { },
+          remove() { },
+        },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.app_metadata?.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabaseAdmin = createClient(
@@ -124,7 +158,7 @@ export async function GET(request: NextRequest) {
     const { data: history, error } = await supabaseAdmin
       .from('backup_history')
       .select('*')
-      .order('backup_date', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(20)
 
     if (error) throw error

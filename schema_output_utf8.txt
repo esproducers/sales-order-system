@@ -1,0 +1,22 @@
+﻿--- Profiles Columns ---
+[
+  'id',
+  'user_id',
+  'name',
+  'email',
+  'phone',
+  'role',
+  'commission_rate',
+  'created_at',
+  'updated_at'
+]
+
+--- Clients Columns ---
+[
+  'id',            'company_name',
+  'ssm_id',        'tin_id',
+  'address',       'company_phone',
+  'contact_phone', 'ssm_file_url',
+  'agent_id',      'created_at',
+  'updated_at'
+]

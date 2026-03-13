@@ -30,19 +30,18 @@ export default function Navbar() {
           <div className="flex items-center space-x-8">
             <Link href="/dashboard" className="flex items-center space-x-2">
               <span className="text-2xl">📦</span>
-              <span className="text-xl font-bold text-indigo-600">SalesOrderPro</span>
+              <span className="text-xl font-bold text-primary">SalesOrderPro</span>
             </Link>
-            
+
             <div className="hidden md:flex space-x-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition ${
-                    pathname === link.href
-                      ? 'bg-indigo-50 text-indigo-600'
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition ${pathname === link.href
+                      ? 'bg-primary-light text-primary-dark'
                       : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <span>{link.icon}</span>
                   <span>{link.name}</span>
@@ -56,7 +55,7 @@ export default function Navbar() {
               <p className="font-medium text-gray-900">{profile?.name}</p>
               <p className="text-sm text-gray-500 capitalize">{profile?.role}</p>
             </div>
-            
+
             <div className="relative">
               <button
                 onClick={() => signOut()}

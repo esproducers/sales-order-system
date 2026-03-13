@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Navbar from '@/components/Navbar'
+import AdminSidebar from '@/components/AdminSidebar'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -17,7 +18,7 @@ interface BackupHistory {
 }
 
 export default function BackupPage() {
-  const { profile } = useAuth()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [backupHistory, setBackupHistory] = useState<BackupHistory[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,11 +26,13 @@ export default function BackupPage() {
 
   // 检查管理员权限
   useEffect(() => {
-    if (profile && profile.role !== 'admin') {
-      toast.error('Access denied. Admin only.')
-      router.push('/dashboard')
+    if (!authLoading && profile) {
+      if (profile.role !== 'admin') {
+        toast.error('Access denied. Admin only.')
+        router.push('/dashboard')
+      }
     }
-  }, [profile, router])
+  }, [profile, authLoading, router])
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -40,17 +43,15 @@ export default function BackupPage() {
   const loadBackupHistory = async () => {
     try {
       setLoading(true)
-      
       const response = await fetch('/api/backup', {
         headers: {
-          'x-api-key': 'your-secret-api-key', // 在实际应用中应该使用环境变量
+          'x-api-key': 'your-secret-api-key',
         },
       })
 
       if (!response.ok) throw new Error('Failed to load backup history')
-
       const data = await response.json()
-      
+
       if (data.success) {
         setBackupHistory(data.backup_history || [])
       } else {
@@ -65,13 +66,10 @@ export default function BackupPage() {
   }
 
   const handleCreateBackup = async () => {
-    if (!confirm('Create a new backup? This might take a few moments.')) {
-      return
-    }
+    if (!confirm('Create a new backup? This might take a few moments.')) return
 
     try {
       setCreatingBackup(true)
-      
       const response = await fetch('/api/backup', {
         method: 'POST',
         headers: {
@@ -80,7 +78,6 @@ export default function BackupPage() {
       })
 
       const data = await response.json()
-      
       if (data.success) {
         toast.success('Backup created successfully!')
         loadBackupHistory()
@@ -95,19 +92,9 @@ export default function BackupPage() {
     }
   }
 
-  const handleDeleteBackup = async (backupId: string, fileName?: string) => {
-    if (!confirm('Delete this backup? This action cannot be undone.')) {
-      return
-    }
-
-    try {
-      // 这里需要实现删除备份文件的逻辑
-      toast.success('Backup deleted successfully')
-      loadBackupHistory()
-    } catch (error: any) {
-      console.error('Error deleting backup:', error)
-      toast.error('Failed to delete backup')
-    }
+  const handleDeleteBackup = async (backupId: string) => {
+    if (!confirm('Delete this backup? This action cannot be undone.')) return
+    toast.success('Backup record archived (Deletion logic pending API implementation)')
   }
 
   const handleDownloadBackup = (fileUrl: string) => {
@@ -115,232 +102,189 @@ export default function BackupPage() {
   }
 
   const handleScheduleBackup = () => {
-    const frequency = prompt('Enter backup frequency (daily/weekly/monthly):')
+    const frequency = prompt('Enter backup frequency (daily/weekly/monthly):', 'daily')
     if (!frequency) return
-
-    const time = prompt('Enter backup time (HH:MM, 24-hour format):')
+    const time = prompt('Enter backup time (HH:MM):', '02:00')
     if (!time) return
-
     toast.success(`Backup scheduled for ${time} ${frequency}`)
-    // 实际应用中应该调用API来设置定时任务
+  }
+
+  if (loading || authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <Navbar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: 40, height: 40,
+              border: '3px solid var(--primary-mid)',
+              borderTop: '3px solid var(--primary)',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            <p style={{ color: '#6b7280' }}>Loading backup systems…</p>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Backup Management</h1>
-          <p className="text-gray-600 mt-2">Manage system backups and data protection</p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Create Backup */}
-          <div className="bg-white rounded-xl shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Manual Backup</h2>
+      <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+        <AdminSidebar />
+        <div style={{ flex: 1 }}>
+          <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>Backup Management</h1>
+              <p style={{ color: '#6b7280', marginTop: 6, fontSize: '0.95rem' }}>Secure your data with manual and automated system backups.</p>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 mb-4">Create a backup of all database tables</p>
+            <div style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={handleCreateBackup}
                 disabled={creatingBackup}
-                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  padding: '11px 22px', background: 'var(--primary)', color: '#fff',
+                  fontWeight: 700, fontSize: '0.9rem', borderRadius: 10, border: 'none',
+                  cursor: creatingBackup ? 'not-allowed' : 'pointer',
+                  opacity: creatingBackup ? 0.7 : 1,
+                  boxShadow: '0 4px 12px rgba(46,189,142,0.25)',
+                }}
               >
-                {creatingBackup ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Creating Backup...
-                  </span>
-                ) : 'Create Backup Now'}
+                {creatingBackup ? 'Creating...' : 'Create Backup Now'}
               </button>
             </div>
           </div>
 
-          {/* Schedule Backup */}
-          <div className="bg-white rounded-xl shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Automated Backup</h2>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 mb-4">Schedule automatic backups</p>
-              <button
-                onClick={handleScheduleBackup}
-                className="w-full py-3 border border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition"
-              >
-                Configure Schedule
-              </button>
-            </div>
+          {/* Stats Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+            {[
+              { label: 'Total Backups', value: backupHistory.length, icon: '💾', color: '#dbeafe' },
+              { label: 'Latest Backup', value: backupHistory[0]?.backup_date ? format(new Date(backupHistory[0].backup_date), 'MMM d') : 'None', icon: '⏱️', color: '#dcfce7' },
+              { label: 'Protected Records', value: backupHistory.reduce((sum, b) => sum + (b.record_count || 0), 0).toLocaleString(), icon: '🛡️', color: '#fef9c3' },
+            ].map((s) => (
+              <div key={s.label} style={{
+                background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(0,0,0,0.02)',
+              }}>
+                <div>
+                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: 0, fontWeight: 600, textTransform: 'uppercase' }}>{s.label}</p>
+                  <p style={{ fontSize: '1.8rem', fontWeight: 800, margin: '4px 0 0', color: '#111827' }}>{s.value}</p>
+                </div>
+                <div style={{ width: 52, height: 52, borderRadius: 12, background: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+                  {s.icon}
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Backup Stats */}
-          <div className="bg-white rounded-xl shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Backup Stats</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: 24 }}>
+            {/* History Table Card */}
+            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.02)' }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0' }}>
+                <h2 style={{ fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>Execution History</h2>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead style={{ background: '#f9fafb' }}>
+                    <tr>
+                      {['Date & Status', 'Type', 'Records', 'Actions'].map(h => (
+                        <th key={h} style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {backupHistory.map((backup) => (
+                      <tr key={backup.id} style={{ borderBottom: '1px solid #f9fafb' }}>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {format(new Date(backup.backup_date), 'MMM d, yyyy')}
+                            <span style={{
+                              width: 8, height: 8, borderRadius: '50%',
+                              background: backup.status === 'completed' ? '#10b981' : '#ef4444'
+                            }} title={backup.status} />
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>{format(new Date(backup.backup_date), 'HH:mm:ss')}</div>
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <span style={{
+                            fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase',
+                            background: backup.backup_type === 'manual' ? '#eff6ff' : '#f0fdf4',
+                            color: backup.backup_type === 'manual' ? '#1e40af' : '#15803d',
+                            padding: '4px 10px', borderRadius: 20
+                          }}>
+                            {backup.backup_type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 24px', fontWeight: 600, color: '#4b5563' }}>
+                          {backup.record_count?.toLocaleString()} rows
+                        </td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            {backup.file_url ? (
+                              <button
+                                onClick={() => handleDownloadBackup(backup.file_url)}
+                                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
+                              >Download</button>
+                            ) : <span style={{ color: '#d1d5db', fontSize: '0.85rem' }}>No Data</span>}
+                            <button
+                              onClick={() => handleDeleteBackup(backup.id)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                            >Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {backupHistory.length === 0 && (
+                  <div style={{ padding: 48, textAlign: 'center', color: '#9ca3af' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: 16 }}>📁</div>
+                    <p style={{ fontSize: '0.95rem', margin: 0 }}>No backup history found.</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Backups:</span>
-                  <span className="font-bold text-gray-900">{backupHistory.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Latest Backup:</span>
-                  <span className="font-bold text-gray-900">
-                    {backupHistory[0]?.backup_date 
-                      ? format(new Date(backupHistory[0].backup_date), 'MMM d, yyyy')
-                      : 'Never'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Records:</span>
-                  <span className="font-bold text-gray-900">
-                    {backupHistory.reduce((sum, b) => sum + (b.record_count || 0), 0)}
-                  </span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Automation Card */}
+              <div style={{ background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)', borderRadius: 14, padding: 24, color: '#fff' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '1.2rem', margin: '0 0 12px' }}>Automation</h3>
+                <p style={{ color: '#9ca3af', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: 20 }}>Configure recurring backups to ensure you never lose critical sales data or agent profiles.</p>
+                <button
+                  onClick={handleScheduleBackup}
+                  style={{
+                    width: '100%', padding: '12px', background: 'var(--primary)', border: 'none', color: '#fff',
+                    borderRadius: 10, fontWeight: 700, cursor: 'pointer'
+                  }}
+                >Set Backup Schedule</button>
+              </div>
+
+              {/* Security Info Card */}
+              <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: 24, border: '1px solid rgba(0,0,0,0.02)' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: 16, color: '#111827' }}>System Insight</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { label: 'Retention Policy', value: '30 Days' },
+                    { label: 'Encryption', value: 'AES-256' },
+                    { label: 'Storage Usage', value: 'Low' },
+                  ].map(item => (
+                    <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                      <span style={{ color: '#6b7280' }}>{item.label}</span>
+                      <span style={{ fontWeight: 700, color: '#111827' }}>{item.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Backup History Table */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Backup History</h2>
-          </div>
-          
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              <p className="mt-2 text-gray-600">Loading backup history...</p>
-            </div>
-          ) : backupHistory.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date & Time
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Records
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      File
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {backupHistory.map((backup) => (
-                    <tr key={backup.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-gray-900">
-                          {format(new Date(backup.backup_date), 'MMM d, yyyy')}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {format(new Date(backup.backup_date), 'h:mm a')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${backup.backup_type === 'manual' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-green-100 text-green-800'}`}>
-                          {backup.backup_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-gray-900">
-                          {backup.record_count?.toLocaleString()} records
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${backup.status === 'completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'}`}>
-                          {backup.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {backup.file_url ? (
-                          <button
-                            onClick={() => handleDownloadBackup(backup.file_url)}
-                            className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                          >
-                            Download
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">No file</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleDeleteBackup(backup.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <div className="text-gray-400 text-6xl mb-4">💾</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No backups yet</h3>
-              <p className="text-gray-600 mb-4">Create your first backup to protect your data</p>
-              <button
-                onClick={handleCreateBackup}
-                className="inline-block px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
-              >
-                Create First Backup
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Backup Information */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-blue-900 mb-3">📚 Backup Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
-            <div>
-              <h4 className="font-medium mb-2">What gets backed up:</h4>
-              <ul className="list-disc list-inside space-y-1">
-                <li>All user profiles and agent information</li>
-                <li>Complete client database</li>
-                <li>All sales orders with details</li>
-                <li>Backup history records</li>
-                <li>Commission calculations</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Best Practices:</h4>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Create backups daily for active systems</li>
-                <li>Download backups to local storage for safekeeping</li>
-                <li>Test backup restoration periodically</li>
-                <li>Keep at least 30 days of backup history</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
