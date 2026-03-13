@@ -165,38 +165,7 @@ export default function Home() {
             commissions effortlessly.
           </p>
 
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link
-              href="/register"
-              style={{
-                padding: '13px 32px',
-                background: 'var(--primary)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                textDecoration: 'none',
-                borderRadius: 10,
-                boxShadow: '0 4px 16px rgba(46,189,142,0.35)',
-              }}
-            >
-              Start Free Trial
-            </Link>
-            <Link
-              href="/login"
-              style={{
-                padding: '13px 32px',
-                border: '2px solid var(--primary)',
-                color: 'var(--primary-dark)',
-                fontWeight: 700,
-                fontSize: '1rem',
-                textDecoration: 'none',
-                borderRadius: 10,
-                background: '#fff',
-              }}
-            >
-              Demo Login
-            </Link>
-          </div>
+
         </div>
 
         {/* Feature cards */}

@@ -13,7 +13,7 @@ interface BackupHistory {
   backup_type: string
   file_url: string
   record_count: number
-  backup_date: string
+  created_at: string
   status: string
 }
 
@@ -45,7 +45,7 @@ export default function BackupPage() {
       setLoading(true)
       const response = await fetch('/api/backup', {
         headers: {
-          'x-api-key': 'your-secret-api-key',
+          'x-api-key': process.env.NEXT_PUBLIC_BACKUP_API_KEY || 'your-secret-api-key',
         },
       })
 
@@ -73,7 +73,7 @@ export default function BackupPage() {
       const response = await fetch('/api/backup', {
         method: 'POST',
         headers: {
-          'x-api-key': 'your-secret-api-key',
+          'x-api-key': process.env.NEXT_PUBLIC_BACKUP_API_KEY || 'your-secret-api-key',
         },
       })
 
@@ -164,7 +164,7 @@ export default function BackupPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
             {[
               { label: 'Total Backups', value: backupHistory.length, icon: '💾', color: '#dbeafe' },
-              { label: 'Latest Backup', value: backupHistory[0]?.backup_date ? format(new Date(backupHistory[0].backup_date), 'MMM d') : 'None', icon: '⏱️', color: '#dcfce7' },
+              { label: 'Latest Backup', value: backupHistory[0]?.created_at ? format(new Date(backupHistory[0].created_at), 'MMM d') : 'None', icon: '⏱️', color: '#dcfce7' },
               { label: 'Protected Records', value: backupHistory.reduce((sum, b) => sum + (b.record_count || 0), 0).toLocaleString(), icon: '🛡️', color: '#fef9c3' },
             ].map((s) => (
               <div key={s.label} style={{
@@ -202,13 +202,13 @@ export default function BackupPage() {
                       <tr key={backup.id} style={{ borderBottom: '1px solid #f9fafb' }}>
                         <td style={{ padding: '16px 24px' }}>
                           <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {format(new Date(backup.backup_date), 'MMM d, yyyy')}
+                            {format(new Date(backup.created_at), 'MMM d, yyyy')}
                             <span style={{
                               width: 8, height: 8, borderRadius: '50%',
                               background: backup.status === 'completed' ? '#10b981' : '#ef4444'
                             }} title={backup.status} />
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>{format(new Date(backup.backup_date), 'HH:mm:ss')}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>{format(new Date(backup.created_at), 'HH:mm:ss')}</div>
                         </td>
                         <td style={{ padding: '16px 24px' }}>
                           <span style={{

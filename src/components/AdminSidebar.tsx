@@ -11,8 +11,8 @@ export default function AdminSidebar() {
     const navItems = [
         { label: 'Admin Dashboard', icon: '📊', href: '/admin' },
         { label: 'Orders Analysis', icon: '📦', href: '/admin/orders' },
-        { label: 'Agent Management', icon: '👨‍💼', href: '/admin/agent' },
         { label: 'Client Management', icon: '🏢', href: '/admin/clients' },
+        { label: 'Agent Management', icon: '👨‍💼', href: '/admin/agent' },
         { label: 'Admin Management', icon: '👤', href: '/admin/admins' },
         { label: 'Backup & Restore', icon: '💾', href: '/admin/backup' },
     ]

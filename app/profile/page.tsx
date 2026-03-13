@@ -7,6 +7,8 @@ import Navbar from '@/components/Navbar'
 import Sidebar from '@/components/Sidebar'
 import toast from 'react-hot-toast'
 
+import { updateAgentAdmin } from '@/actions/agents'
+
 export default function ProfilePage() {
     const { profile, loading: authLoading } = useAuth()
     const [loading, setLoading] = useState(false)
@@ -31,16 +33,17 @@ export default function ProfilePage() {
         if (!profile?.id) return
         try {
             setLoading(true)
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    name: form.name,
-                    phone: form.phone,
-                })
-                .eq('id', profile.id)
+            // Use server action to bypass RLS and ensure DB updates
+            const { error: serverError } = await updateAgentAdmin(profile.id, {
+                name: form.name,
+                phone: form.phone,
+            })
 
-            if (error) throw error
-            toast.success('Profile updated successfully')
+            if (serverError) throw new Error(serverError)
+
+            toast.success('Profile updated successfully! Refreshing...')
+            // Force a page reload to refresh the AuthContext profile data from DB
+            window.location.reload()
         } catch (err: any) {
             toast.error('Failed to update profile: ' + err.message)
         } finally {

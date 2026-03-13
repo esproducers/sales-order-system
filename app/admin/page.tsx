@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
-import { createAgentAdmin, updateAgentAdmin } from '@/actions/agents'
+import { createAgentAdmin, updateAgentAdmin, approveAgentAdmin } from '@/actions/agents'
 import { updateOrderStatusAdmin } from '@/actions/orders'
 import { updateAgentStatusAdmin } from '@/actions/clients'
 
@@ -26,6 +26,7 @@ export default function AdminPage() {
     totalOrders: 0,
     totalSales: 0,
     totalCommission: 0,
+    totalPendingAgents: 0,
   })
   const [agents, setAgents] = useState<any[]>([])
   const [recentOrders, setRecentOrders] = useState<any[]>([])
@@ -85,6 +86,7 @@ export default function AdminPage() {
         totalOrders: ordersData?.length || 0,
         totalSales,
         totalCommission,
+        totalPendingAgents: agentsData?.filter(a => a.is_approved === false).length || 0,
       })
 
       setAgents(agentsData || [])
@@ -223,6 +225,21 @@ export default function AdminPage() {
     }
   }
 
+  const handleApprove = async (agentId: string) => {
+    if (!confirm('Approve this user? An email confirmation will be sent.')) return
+    try {
+      setLoading(true)
+      const { error } = await approveAgentAdmin(agentId)
+      if (error) throw new Error(error)
+      toast.success('Agent approved and email sent!')
+      loadAdminData()
+    } catch (err: any) {
+      toast.error('Failed: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
       const { error } = await updateOrderStatusAdmin(orderId, newStatus)
@@ -290,6 +307,7 @@ export default function AdminPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
               { label: 'New Orders', value: recentOrders.filter(o => !o.status || o.status.toLowerCase() === 'confirmed' || o.status === 'active').length, icon: '🚨', color: '#ffedd5', href: '#incoming-orders' },
+              { label: 'New Agents', value: stats.totalPendingAgents, icon: '👤', color: '#fef9c3', href: '/admin/agent' },
               { label: 'Total Admins', value: stats.totalAdmins, icon: '👑', color: '#fef3c7', href: '/admin/admins' },
               { label: 'Total Agents', value: stats.totalAgents, icon: '👨‍💼', color: '#dbeafe', href: '/admin/agent' },
               { label: 'Total Clients', value: stats.totalClients, icon: '🏢', color: '#dcfce7', href: '/admin/clients' },
@@ -446,10 +464,14 @@ export default function AdminPage() {
                     {agents.filter(a => a.role === 'agent').map((agent) => {
                       const isDeactivated = agent.name?.startsWith('(INACTIVE) ');
                       const displayName = isDeactivated ? agent.name.replace('(INACTIVE) ', '') : agent.name;
+                      const isPending = agent.is_approved === false;
                       return (
                         <tr key={agent.id} style={{ borderBottom: '1px solid #f9fafb', fontSize: '0.9rem', opacity: isDeactivated ? 0.6 : 1, background: isDeactivated ? '#f9fafb' : 'transparent' }}>
                           <td style={{ padding: '16px 24px' }}>
-                            <div style={{ fontWeight: 700, color: '#111827' }}>{displayName}</div>
+                            <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {displayName}
+                              {isPending && <span title="Pending Approval" style={{ cursor: 'help' }}>⏳</span>}
+                            </div>
                             <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>{agent.email}</div>
                           </td>
                           <td style={{ padding: '16px 24px' }}>
@@ -462,16 +484,25 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center' }}>
-                              <span style={{
-                                fontSize: '0.7rem',
-                                padding: '3px 8px',
-                                borderRadius: 6,
-                                fontWeight: 700,
-                                background: isDeactivated ? '#fee2e2' : '#f0fdf9',
-                                color: isDeactivated ? '#ef4444' : '#0d9488'
-                              }}>
-                                {isDeactivated ? 'INACTIVE' : 'ACTIVE'}
-                              </span>
+                              {isPending ? (
+                                <button
+                                  onClick={() => handleApprove(agent.id)}
+                                  style={{ padding: '5px 10px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}
+                                >
+                                  Approve
+                                </button>
+                              ) : (
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  padding: '3px 8px',
+                                  borderRadius: 6,
+                                  fontWeight: 700,
+                                  background: isDeactivated ? '#fee2e2' : '#f0fdf9',
+                                  color: isDeactivated ? '#ef4444' : '#0d9488'
+                                }}>
+                                  {isDeactivated ? 'INACTIVE' : 'ACTIVE'}
+                                </span>
+                              )}
                               <button
                                 onClick={() => handleUpdateCommission(agent.id, agent.commission_rate)}
                                 style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}
@@ -482,7 +513,7 @@ export default function AdminPage() {
                                 onClick={() => handleToggleStatus(agent)}
                                 style={{ background: 'none', border: 'none', color: isDeactivated ? 'var(--primary-dark)' : '#ef4444', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
                               >
-                                {isDeactivated ? 'Reactivate' : 'Deactivate'}
+                                {isDeactivated ? '✓' : '✖'}
                               </button>
                               <Link
                                 href={`/admin/agent/${agent.id}`}

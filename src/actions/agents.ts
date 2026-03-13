@@ -122,3 +122,113 @@ export async function updateAgentAdmin(agentId: string, updates: { name?: string
         return { error: error.message || 'Server error updating agent' }
     }
 }
+export async function approveAgentAdmin(agentId: string) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const emailUser = process.env.EMAIL_USER
+    const emailPass = process.env.EMAIL_PASS
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { error: 'Missing Supabase service variables' }
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    })
+
+    try {
+        // 1. Update is_approved in profiles
+        const { data: agent, error: updateError } = await supabase
+            .from('profiles')
+            .update({ is_approved: true })
+            .eq('id', agentId)
+            .select()
+            .single()
+
+        if (updateError) return { error: updateError.message }
+
+        // 2. Send Email Notification
+        if (emailUser && emailPass && agent) {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: emailUser,
+                    pass: emailPass,
+                },
+            })
+
+            await transporter.sendMail({
+                from: `"OhMAMA Sales" <${emailUser}>`,
+                to: agent.email,
+                subject: 'Account Approved - OhMAMA Sales System',
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; border-top: 5px solid #2ebd8e;">
+                        <div style="background: #2ebd8e; padding: 40px 20px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 24px;">Account Approved!</h1>
+                        </div>
+                        <div style="padding: 30px; line-height: 1.6; color: #374151;">
+                            <p>Hello <strong>${agent.name}</strong>,</p>
+                            <p>Good news! Your account has been approved by the administrator.</p>
+                            <p>You can now log in to access your dashboard and manage sales orders.</p>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <a href="${siteUrl}/login" style="background: #2ebd8e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Login to Your Account</a>
+                            </div>
+                        </div>
+                        <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+                            © 2026 OhMAMA Sales. All rights reserved.
+                        </div>
+                    </div>
+                `
+            })
+        }
+
+        return { success: true, data: agent }
+    } catch (error: any) {
+        console.error('Approve agent error:', error)
+        return { error: error.message || 'Server error approving agent' }
+    }
+}
+
+export async function createAdminAccount(adminData: { email: string, name: string, phone: string }) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { error: 'Missing Supabase service variables' }
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    })
+
+    try {
+        // 1. Create Auth User
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: adminData.email,
+            password: 'adminPassword123!',
+            email_confirm: true,
+            user_metadata: { name: adminData.name }
+        })
+
+        if (authError) return { error: authError.message }
+
+        // 2. Create Profile
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([{
+                user_id: authData.user.id,
+                name: adminData.name,
+                email: adminData.email,
+                phone: adminData.phone,
+                role: 'admin',
+                is_approved: true
+            }])
+
+        if (profileError) return { error: profileError.message }
+
+        return { success: true, data: authData.user }
+    } catch (error: any) {
+        return { error: error.message || 'Server error creating admin' }
+    }
+}

@@ -25,8 +25,10 @@ export default function LoginPage() {
   const handleForgotPassword = async () => {
     if (!email) { alert('Please enter your email first'); return }
     try {
-      await resetPassword(email)
-      alert('Password reset email sent! Check your inbox.')
+      const success = await resetPassword(email)
+      if (success) {
+        alert('Password reset email sent! Check your inbox (including Junk/Spam).')
+      }
     } catch (error) {
       console.error('Reset password error:', error)
     }
@@ -158,21 +160,7 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <div
-          style={{
-            marginTop: 24,
-            paddingTop: 20,
-            borderTop: '1px solid #f0f0f0',
-            textAlign: 'center',
-            fontSize: '0.75rem',
-            color: '#9ca3af',
-            lineHeight: 1.8,
-          }}
-        >
-          Demo: agent@example.com / password123
-          <br />
-          Admin: admin@example.com / admin123
-        </div>
+
       </div>
     </div>
   )

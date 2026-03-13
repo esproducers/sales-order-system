@@ -13,7 +13,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string, phone: string) => Promise<void>
   signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<void>
+  resetPassword: (email: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -111,8 +111,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
+
+      if (authData.user) {
+        const { data: profileData } = await getProfileAdmin(authData.user.id)
+        if (profileData && profileData.is_approved === false) {
+          await supabase.auth.signOut()
+          throw new Error('Your account is pending admin approval. Please wait for an email notification.')
+        }
+      }
 
       toast.success('Login successful!')
       router.push('/dashboard')
@@ -128,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
         },
       })
       if (authError) throw authError
@@ -142,11 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email,
             phone,
             role: 'agent',
+            is_approved: false,
           },
         ])
       if (profileError) throw profileError
 
-      toast.success('Registration successful! Please check your email to confirm your account.')
+      toast.success('Registration successful! Your account is pending admin approval. Please check your email to confirm your account.')
       router.push('/login')
     } catch (error: any) {
       toast.error(error.message || 'Registration failed')
@@ -169,13 +178,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/reset-password`,
       })
       if (error) throw error
 
       toast.success('Password reset email sent!')
+      return true
     } catch (error: any) {
       toast.error(error.message || 'Failed to send reset email')
+      return false
     }
   }
 
