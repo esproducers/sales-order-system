@@ -10,48 +10,49 @@ export default function SettingsPage() {
     const { loading: authLoading } = useAuth()
     const { fontSize, setFontSize } = useTheme()
 
-    if (authLoading) return <div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>
+    if (authLoading) return <div className="p-20 text-center">Loading…</div>
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
-            <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+            <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
                 <Sidebar />
-                <div style={{ flex: 1 }}>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 8 }}>Account Settings</h1>
-                    <p style={{ color: '#6b7280', marginBottom: 32 }}>Manage your application preferences</p>
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2 mt-0">Account Settings</h1>
+                    <p className="text-gray-500 mb-6 md:mb-8 text-sm md:text-base">Manage your application preferences</p>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div className="flex flex-col gap-6">
                         {/* App Customization Section */}
-                        <div style={{ background: '#fff', borderRadius: 16, padding: 32, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 24, borderBottom: '2px solid var(--primary-light)', paddingBottom: 12 }}>App Word Size (Font Size)</h2>
-                            <p style={{ color: '#6b7280', marginBottom: 20, fontSize: '0.95rem' }}>Adjust the overall readability of the application.</p>
+                        <div className="bg-white rounded-2xl p-6 md:p-8 shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-gray-100 mb-8">
+                            <h2 className="text-lg md:text-xl font-extrabold mb-6 pb-3 border-b-2 border-primary-light text-gray-900 mt-0">App Word Size (Font Size)</h2>
+                            <p className="text-gray-500 mb-5 text-sm md:text-base">Adjust the overall readability of the application.</p>
 
-                            <div style={{ display: 'flex', gap: 12 }}>
-                                {(['small', 'medium', 'large'] as const).map((size) => (
-                                    <button
-                                        key={size}
-                                        onClick={() => {
-                                            setFontSize(size);
-                                            toast.success(`${size.charAt(0).toUpperCase() + size.slice(1)} text enabled`);
-                                        }}
-                                        style={{
-                                            padding: '14px 28px',
-                                            borderRadius: 12,
-                                            border: fontSize === size ? '2px solid var(--primary)' : '2px solid #e5e7eb',
-                                            background: fontSize === size ? 'var(--primary-light)' : '#fff',
-                                            color: fontSize === size ? 'var(--primary-dark)' : '#374151',
-                                            fontWeight: 800,
-                                            fontSize: size === 'small' ? '0.8rem' : size === 'medium' ? '1rem' : '1.2rem',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            flex: 1,
-                                            textTransform: 'capitalize'
-                                        }}
-                                    >
-                                        {size === 'small' ? 'Small' : size === 'medium' ? 'Normal' : 'Large'}
-                                    </button>
-                                ))}
+                            <div className="flex flex-col sm:flex-row gap-4 md:gap-5 w-full">
+                                {(['small', 'medium', 'large'] as const).map((size) => {
+                                    const active = fontSize === size;
+                                    return (
+                                        <button
+                                            key={size}
+                                            onClick={() => {
+                                                setFontSize(size);
+                                                toast.success(`${size.charAt(0).toUpperCase() + size.slice(1)} text enabled`);
+                                            }}
+                                            className={`
+                                                flex-1 py-4 px-6 md:px-8 rounded-xl font-extrabold border-2 cursor-pointer transition-colors shadow-sm
+                                                capitalize shrink-0
+                                                ${active
+                                                    ? 'bg-primary-light border-primary text-primary-dark'
+                                                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                                                }
+                                            `}
+                                            style={{
+                                                fontSize: size === 'small' ? '0.85rem' : size === 'medium' ? '1rem' : '1.15rem'
+                                            }}
+                                        >
+                                            {size === 'small' ? 'Small' : size === 'medium' ? 'Normal' : 'Large'}
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
