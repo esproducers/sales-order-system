@@ -113,21 +113,21 @@ export default function DashboardPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+      <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 flex flex-col md:flex-row gap-6 md:gap-8">
         <Sidebar totalCommission={stats.currentMonthCommission} />
 
-        <div style={{ flex: 1 }}>
-          <div style={{ marginBottom: 28 }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0 }}>
+        <div className="flex-1 min-w-0">
+          <div className="mb-6 md:mb-8 text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 m-0 leading-tight">
               Welcome back, {profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Agent'}! 👋
             </h1>
-            <p style={{ color: '#6b7280', marginTop: 6, fontSize: '0.9rem' }}>
+            <p className="text-gray-500 mt-2 text-[0.9rem]">
               Here's what's happening with your sales today.
             </p>
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
             {[
               { label: 'Total Orders', value: stats.totalOrders, icon: '📦', color: 'var(--primary-light)' },
               { label: 'Total Clients', value: stats.totalClients, icon: '👥', color: '#dcfce7' },
@@ -172,11 +172,11 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 24 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
             {/* Quick Actions */}
-            <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: 24 }}>
-              <h2 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 20, marginTop: 0 }}>Quick Actions</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-6">
+              <h2 className="font-bold text-base mb-5 mt-0 text-gray-900">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { label: 'New Order', sub: 'Create a sales order', icon: '➕', href: '/orders/new', color: 'var(--primary-light)' },
                   { label: 'Product Gallery', sub: 'View current products', icon: '🍦', href: '/products', color: '#fff1f2' },
@@ -203,8 +203,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Recent Orders */}
-            <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-              <div style={{ padding: '18px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col h-full">
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
                 <h2 style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>Recent Orders</h2>
                 <Link href="/orders" style={{ fontSize: '0.75rem', color: 'var(--primary-dark)', textDecoration: 'none', fontWeight: 600 }}>View all →</Link>
               </div>

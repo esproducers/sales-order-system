@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: 'Manage sales orders for agents',
 }
 
+import Footer from '@/components/Footer'
+
 export default function RootLayout({
   children,
 }: {
@@ -19,11 +21,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen flex flex-col`}>
         <ThemeProvider>
           <AuthProvider>
             <Toaster position="top-right" />
-            {children}
+            <main className="flex-1 shrink-0 bg-gray-50 flex flex-col">
+              {children}
+            </main>
+            <Footer />
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 interface SidebarProps {
     totalCommission?: number
@@ -11,6 +12,7 @@ interface SidebarProps {
 export default function Sidebar({ totalCommission = 0 }: SidebarProps) {
     const { user, profile } = useAuth()
     const pathname = usePathname()
+    const [isOpen, setIsOpen] = useState(false)
 
     const navItems = [
         { label: 'My Profile', icon: '👤', href: '/profile' },
@@ -27,96 +29,68 @@ export default function Sidebar({ totalCommission = 0 }: SidebarProps) {
     ]
 
     return (
-        <aside style={{ width: 240, flexShrink: 0 }}>
-            {/* Profile card */}
-            <div
-                style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    padding: '20px 16px',
-                    marginBottom: 12,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                        style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            background: 'var(--primary)',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '1.2rem',
-                        }}
-                    >
-                        {(profile?.name || user?.user_metadata?.full_name || 'U')[0].toUpperCase()}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {profile?.name || user?.user_metadata?.full_name || 'User'}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#6b7280', textTransform: 'capitalize' }}>{profile?.role}</div>
-                    </div>
-                </div>
+        <aside className="w-full md:w-[240px] shrink-0">
+            {/* Mobile Dropdown Toggle (Hidden on desktop) */}
+            <div className="md:hidden mb-4">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-full flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100 text-gray-700 font-semibold"
+                >
+                    <span className="flex items-center gap-2">
+                        <span>☰</span> Menu
+                    </span>
+                    <span className="text-gray-400">{isOpen ? '▲' : '▼'}</span>
+                </button>
             </div>
 
-            {/* Nav menu */}
-            <div
-                style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                }}
-            >
-                {navItems.map((item) => {
-                    const active = pathname === item.href
-                    return (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '13px 16px',
-                                textDecoration: 'none',
-                                background: active ? 'var(--primary)' : '#fff',
-                                color: active ? '#fff' : '#374151',
-                                borderBottom: '1px solid #f3f4f6',
-                                fontSize: '0.875rem',
-                                fontWeight: active ? 600 : 400,
-                                transition: 'background 0.15s',
-                            }}
-                        >
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span>{item.icon}</span>
-                                <span>{item.label}</span>
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                {item.badge && (
-                                    <span
-                                        style={{
-                                            background: active ? 'rgba(255,255,255,0.25)' : 'var(--primary-light)',
-                                            color: active ? '#fff' : 'var(--primary-dark)',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 700,
-                                            padding: '2px 8px',
-                                            borderRadius: 20,
-                                        }}
-                                    >
-                                        {item.badge}
-                                    </span>
-                                )}
-                                <span style={{ opacity: 0.5, fontSize: '0.75rem' }}>›</span>
-                            </span>
-                        </Link>
-                    )
-                })}
+            {/* Sidebar Content (Toggled on mobile, always visible on desktop) */}
+            <div className={`${isOpen ? 'block' : 'hidden'} md:block mb-6 md:mb-0`}>
+                {/* Profile card */}
+                <div className="bg-white rounded-xl p-4 mb-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
+                        {(profile?.name || user?.user_metadata?.full_name || 'U')[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                        <div className="font-bold text-[0.95rem] overflow-hidden text-ellipsis whitespace-nowrap text-gray-900">
+                            {profile?.name || user?.user_metadata?.full_name || 'User'}
+                        </div>
+                        <div className="text-[0.78rem] text-gray-500 capitalize">{profile?.role}</div>
+                    </div>
+                </div>
+
+                {/* Nav menu */}
+                <div className="bg-white rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                    {navItems.map((item) => {
+                        const active = pathname === item.href
+                        return (
+                            <Link
+                                key={item.label}
+                                href={item.href}
+                                onClick={() => setIsOpen(false)}
+                                className={`flex items-center justify-between px-4 py-[13px] text-sm transition-colors border-b border-gray-50 last:border-0 ${
+                                    active
+                                        ? 'bg-primary text-white font-semibold'
+                                        : 'bg-white text-gray-700 font-normal hover:bg-gray-50'
+                                }`}
+                            >
+                                <span className="flex items-center gap-2.5">
+                                    <span>{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    {item.badge && (
+                                        <span className={`text-[0.7rem] font-bold px-2 py-0.5 rounded-full ${
+                                            active ? 'bg-white/25 text-white' : 'bg-primary-light text-primary-dark'
+                                        }`}>
+                                            {item.badge}
+                                        </span>
+                                    )}
+                                    <span className="opacity-50 text-[0.75rem]">›</span>
+                                </span>
+                            </Link>
+                        )
+                    })}
+                </div>
             </div>
         </aside>
     )

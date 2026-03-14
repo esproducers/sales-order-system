@@ -15,6 +15,7 @@ export default function AdminSidebar() {
         { label: 'Agent Management', icon: '👨‍💼', href: '/admin/agent' },
         { label: 'Admin Management', icon: '👤', href: '/admin/admins' },
         { label: 'Backup & Restore', icon: '💾', href: '/admin/backup' },
+        { label: 'Site Settings', icon: '⚙️', href: '/admin/settings' },
     ]
 
     return (
