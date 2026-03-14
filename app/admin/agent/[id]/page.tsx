@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { useRouter, useParams } from 'next/navigation'
 import { updateAgentAdmin } from '@/actions/agents'
 import { updateAgentStatusAdmin } from '@/actions/clients'
+import Modal from '@/components/Modal'
 
 export default function AgentDetailPage() {
     const { profile, loading: authLoading } = useAuth()
@@ -24,6 +25,10 @@ export default function AgentDetailPage() {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [editMode, setEditMode] = useState(false)
+
+    // Confirm Modal State
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void }>({ title: '', message: '', onConfirm: () => { } })
 
     const [form, setForm] = useState({
         name: '',
@@ -92,24 +97,30 @@ export default function AgentDetailPage() {
         const confirmMsg = !isDeactivated
             ? `Deactivate ${agent.name}? They will lose access to the system.`
             : `Reactivate ${agent.name}?`
-        if (!confirm(confirmMsg)) return
 
-        try {
-            const { error } = await updateAgentStatusAdmin(agentId, isDeactivated)
-            if (error) throw new Error(typeof error === 'string' ? error : error.message)
-            setAgent((prev: any) => {
-                let newName = prev.name
-                if (!isDeactivated) {
-                    newName = '(INACTIVE) ' + newName
-                } else {
-                    newName = newName.replace('(INACTIVE) ', '')
+        setConfirmAction({
+            title: isDeactivated ? 'Reactivate Agent' : 'Deactivate Agent',
+            message: confirmMsg,
+            onConfirm: async () => {
+                try {
+                    const { error } = await updateAgentStatusAdmin(agentId, isDeactivated)
+                    if (error) throw new Error(typeof error === 'string' ? error : error.message)
+                    setAgent((prev: any) => {
+                        let newName = prev.name
+                        if (!isDeactivated) {
+                            newName = '(INACTIVE) ' + newName
+                        } else {
+                            newName = newName.replace('(INACTIVE) ', '')
+                        }
+                        return { ...prev, name: newName }
+                    })
+                    toast.success(!isDeactivated ? 'Agent deactivated.' : 'Agent reactivated!')
+                } catch (err: any) {
+                    toast.error('Failed: ' + err.message)
                 }
-                return { ...prev, name: newName }
-            })
-            toast.success(!isDeactivated ? 'Agent deactivated.' : 'Agent reactivated!')
-        } catch (err: any) {
-            toast.error('Failed: ' + err.message)
-        }
+            }
+        })
+        setIsConfirmModalOpen(true)
     }
 
     if (loading || authLoading) {
@@ -367,6 +378,18 @@ export default function AgentDetailPage() {
                 </div>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
+
+            {/* Confirm Actions Modal */}
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={confirmAction.title}>
+                <div className="space-y-6">
+                    <p className="text-gray-600">{confirmAction.message}</p>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">Cancel</button>
+                        <button onClick={() => { setIsConfirmModalOpen(false); confirmAction.onConfirm(); }} className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition">Confirm</button>
+                    </div>
+                </div>
+            </Modal>
+
         </div>
     )
 }

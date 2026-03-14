@@ -9,6 +9,7 @@ import AdminSidebar from '@/components/AdminSidebar'
 import toast from 'react-hot-toast'
 import { updateAgentAdmin, createAdminAccount } from '@/actions/agents'
 import { updateAgentStatusAdmin } from '@/actions/clients'
+import Modal from '@/components/Modal'
 
 export default function AdminsPage() {
     const { profile, loading: authLoading } = useAuth()
@@ -16,9 +17,13 @@ export default function AdminsPage() {
     const [loading, setLoading] = useState(true)
 
     // Modal State
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [selectedAdmin, setSelectedAdmin] = useState<any>(null)
     const [formData, setFormData] = useState({ name: '', email: '', phone: '' })
+
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void }>({ title: '', message: '', onConfirm: () => { } })
+
 
     useEffect(() => {
         if (!authLoading && profile?.role === 'admin') {
@@ -53,7 +58,7 @@ export default function AdminsPage() {
             setSelectedAdmin(null)
             setFormData({ name: '', email: '', phone: '' })
         }
-        setIsModalOpen(true)
+        setIsCreateModalOpen(true)
     }
 
     const handleSaveAdmin = async (e: React.FormEvent) => {
@@ -80,9 +85,9 @@ export default function AdminsPage() {
                     phone: formData.phone
                 })
                 if (error) throw new Error(error)
-                toast.success('Admin created')
+                toast.success('Admin created! Temp password: temporary123', { duration: 10000 })
             }
-            setIsModalOpen(false)
+            setIsCreateModalOpen(false)
             loadAdmins()
         } catch (err: any) {
             toast.error('Error: ' + err.message)
@@ -91,29 +96,35 @@ export default function AdminsPage() {
         }
     }
 
-    const handleToggleStatus = async (user: any) => {
-        const isDeactivated = user.name?.startsWith('(INACTIVE) ');
-        if (!confirm(`${isDeactivated ? 'Reactivate' : 'Deactivate'} this admin?`)) return
-        try {
-            setLoading(true)
-            const { error } = await updateAgentStatusAdmin(user.id, isDeactivated)
-            if (error) throw new Error(typeof error === 'string' ? error : error.message)
-            toast.success(`Admin ${isDeactivated ? 'reactivated' : 'deactivated'}`)
-            loadAdmins()
-        } catch (err: any) {
-            console.error('Admin toggle error:', err)
-            toast.error('Failed: ' + (err.message || 'Unknown error'))
-        } finally {
-            setLoading(false)
-        }
+    const promptToggleStatus = (user: any) => {
+        const isDeactivated = user.name?.startsWith('(INACTIVE) ')
+        const actionText = isDeactivated ? 'Reactivate' : 'Deactivate'
+        setConfirmAction({
+            title: `${actionText} Admin`,
+            message: `Are you sure you want to ${actionText.toLowerCase()} this admin?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true)
+                    const { error } = await updateAgentStatusAdmin(user.id, isDeactivated)
+                    if (error) throw new Error(typeof error === 'string' ? error : error.message)
+                    toast.success(`Admin ${isDeactivated ? 'reactivated' : 'deactivated'}`)
+                    loadAdmins()
+                } catch (err: any) {
+                    toast.error('Failed: ' + (err.message || 'Unknown error'))
+                } finally {
+                    setLoading(false)
+                }
+            }
+        })
+        setIsConfirmModalOpen(true)
     }
 
     if (loading || authLoading) {
         return (
-            <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
                 <Navbar />
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
-                    <p>Loading admins…</p>
+                <div className="flex items-center justify-center p-20 flex-1">
+                    <p className="text-gray-500">Loading admins…</p>
                 </div>
             </div>
         )
@@ -125,91 +136,115 @@ export default function AdminsPage() {
             <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
                 <AdminSidebar />
                 <div className="flex-1 min-w-0">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         <div>
-                            <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>Portal Admins</h1>
-                            <p style={{ color: '#6b7280', marginTop: 4 }}>Manage root access and administrative accounts</p>
+                            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 m-0">Portal Admins</h1>
+                            <p className="text-gray-500 mt-2 text-[0.95rem]">Manage root access and administrative accounts</p>
                         </div>
-                        <button onClick={() => openModal()} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', cursor: 'pointer', fontWeight: 700 }}>+ Add Admin</button>
+                        <button
+                            onClick={() => openModal()}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white font-bold text-sm rounded-xl shadow-[0_4px_12px_rgba(46,189,142,0.25)] hover:bg-primary-dark transition-colors"
+                        >
+                            + Add Admin
+                        </button>
                     </div>
 
-                    <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                        <div style={{ padding: '0 24px' }}>
+                    <div className="bg-transparent md:bg-white md:rounded-xl md:shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+                        <div className="flex flex-col gap-4 md:gap-0">
                             {admins.map(admin => {
                                 const isDeactivated = admin.name?.startsWith('(INACTIVE) ');
                                 const displayName = isDeactivated ? admin.name.replace('(INACTIVE) ', '') : admin.name;
                                 return (
-                                    <div key={admin.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid #f3f4f6', opacity: isDeactivated ? 0.6 : 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                            <div style={{ padding: '4px 12px', background: isDeactivated ? '#fee2e2' : 'var(--primary-light)', color: isDeactivated ? '#ef4444' : 'var(--primary-dark)', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                                    <div key={admin.id} className={`bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] md:shadow-none md:rounded-none md:border-b md:border-gray-100 flex flex-col md:flex-row md:items-center justify-between p-4 md:px-6 md:py-5 gap-4 md:gap-0 ${isDeactivated ? 'opacity-60 bg-gray-50' : ''}`}>
+                                        <div className="flex items-start md:items-center gap-4">
+                                            <div className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full shrink-0 mt-1 md:mt-0 ${isDeactivated ? 'bg-red-100 text-red-600' : 'bg-primary-light text-primary-dark'}`}>
                                                 {isDeactivated ? 'Inactive' : 'Active'}
                                             </div>
-                                            <div>
-                                                <div style={{ fontWeight: 800, color: '#111827', fontSize: '1.05rem' }}>{displayName}</div>
-                                                <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: 2 }}>{admin.email} {admin.phone && `• ${admin.phone}`}</div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-extrabold text-gray-900 text-[1.05rem] break-all leading-tight">{displayName}</div>
+                                                <div className="text-sm text-gray-500 mt-1 flex flex-col sm:flex-row sm:gap-2">
+                                                    <span>{admin.email}</span>
+                                                    {admin.phone && <span className="hidden sm:inline">•</span>}
+                                                    {admin.phone && <span>{admin.phone}</span>}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 12 }}>
-                                            <button onClick={() => openModal(admin)} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', color: '#374151' }}>Edit</button>
-                                            <button onClick={() => handleToggleStatus(admin)} style={{ background: 'none', border: 'none', color: isDeactivated ? 'var(--primary-dark)' : '#ef4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                                        
+                                        <div className="flex gap-2 items-center border-t border-gray-50 md:border-0 pt-3 md:pt-0 shrink-0 self-end md:self-auto">
+                                            <button
+                                                onClick={() => openModal(admin)}
+                                                className="px-4 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg font-bold text-sm text-gray-700 transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => promptToggleStatus(admin)}
+                                                className={`px-3 py-1.5 rounded-lg border-none font-bold text-sm cursor-pointer transition flex items-center gap-1 ${isDeactivated ? 'text-primary-dark hover:bg-primary-light' : 'text-red-500 hover:bg-red-50'}`}
+                                            >
                                                 {isDeactivated ? 'Reactivate' : 'Deactivate'}
                                             </button>
                                         </div>
                                     </div>
                                 );
                             })}
-                            {admins.length === 0 && <p style={{ textAlign: 'center', color: '#6b7280', padding: 40, fontWeight: 600 }}>No admins found.</p>}
                         </div>
+                        {admins.length === 0 && (
+                            <div className="p-12 text-center text-gray-400 font-medium bg-white rounded-xl shadow-sm md:shadow-none md:rounded-none">No admins found.</div>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Admin Edit/Create Modal */}
-            {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 450, padding: 32, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: 24 }}>{selectedAdmin ? 'Edit Admin Details' : 'Add New Admin'}</h2>
-                        <form onSubmit={handleSaveAdmin}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#4b5563', marginBottom: 6 }}>Full Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #d1d5db', outline: 'none' }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#4b5563', marginBottom: 6 }}>Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        disabled={!!selectedAdmin}
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #d1d5db', outline: 'none', background: selectedAdmin ? '#f9fafb' : '#fff' }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#4b5563', marginBottom: 6 }}>Phone Number (Optional)</label>
-                                    <input
-                                        type="text"
-                                        value={formData.phone}
-                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #d1d5db', outline: 'none' }}
-                                    />
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ flex: 1, padding: '12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}>Save Changes</button>
-                            </div>
-                        </form>
+            <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title={selectedAdmin ? 'Edit Admin Details' : 'Add New Admin'}>
+                <form onSubmit={handleSaveAdmin} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.name}
+                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
+                        <input
+                            type="email"
+                            required
+                            disabled={!!selectedAdmin}
+                            value={formData.email}
+                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                            className={`w-full px-3 py-2 border rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary ${selectedAdmin ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number (Optional)</label>
+                        <input
+                            type="text"
+                            value={formData.phone}
+                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full py-2.5 bg-primary text-white font-bold rounded-lg mt-4 disabled:opacity-50 hover:bg-primary-dark transition-colors">
+                        {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </form>
+            </Modal>
+
+            {/* Confirm Actions Modal */}
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={confirmAction.title}>
+                <div className="space-y-6">
+                    <p className="text-gray-600">{confirmAction.message}</p>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">Cancel</button>
+                        <button onClick={() => { setIsConfirmModalOpen(false); confirmAction.onConfirm(); }} className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition">Confirm</button>
                     </div>
                 </div>
-            )}
+            </Modal>
+
         </div>
     )
 }

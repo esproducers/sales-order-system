@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { useParams } from 'next/navigation'
+import Sidebar from '@/components/Sidebar'
+import Modal from '@/components/Modal'
 
 const STATUS_STEPS = ['Confirmed', 'Preparing', 'Picked up', 'Delivered']
 
@@ -20,6 +22,10 @@ export default function ClientOrdersPage() {
   const [tab, setTab] = useState<'upcoming' | 'previous' | 'all'>('upcoming')
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void }>({ title: '', message: '', onConfirm: () => { } })
+
 
   useEffect(() => {
     if (profile && clientId) {
@@ -49,202 +55,75 @@ export default function ClientOrdersPage() {
     }
   }
 
-  const handleDelete = async (orderId: string) => {
-    if (!confirm('Delete this order? This cannot be undone.')) return
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', orderId)
-        .eq('agent_id', profile.id)
-      if (error) throw error
-      toast.success('Order deleted')
-      loadOrders()
-    } catch (error: any) {
-      toast.error('Failed to delete order')
-    }
+  const promptDelete = (orderId: string) => {
+    setConfirmAction({
+        title: 'Delete Order',
+        message: 'Delete this order? This cannot be undone.',
+        onConfirm: async () => {
+            try {
+              const { error } = await supabase
+                .from('orders')
+                .delete()
+                .eq('id', orderId)
+                .eq('agent_id', profile.id)
+              if (error) throw error
+              toast.success('Order deleted')
+              loadOrders()
+            } catch (error: any) {
+              toast.error('Failed to delete order')
+            }
+        }
+    })
+    setIsConfirmModalOpen(true)
   }
 
   const canEdit = (order: any) => new Date(order.can_edit_until) > new Date()
-
   const totalCommission = orders.reduce((sum, o) => sum + (o.commission_amount || 0), 0)
 
-  const navItems = [
-    { label: 'My Profile', icon: '👤', href: '/dashboard' },
-    { label: 'My List', icon: '📋', href: '/clients' },
-    { label: 'My Orders', icon: '✅', href: '/orders', active: true },
-    { label: 'Payments', icon: '💳', href: '#', badge: `RM ${totalCommission.toFixed(0)}` },
-    { label: 'Address Book', icon: '📍', href: '#' },
-    { label: 'Referrals', icon: '🔗', href: '#' },
-    { label: 'Account Settings', icon: '⚙️', href: '#' },
-  ]
+  // Filter orders based on tab
+  const displayOrders = orders.filter(o => {
+    if (tab === 'all') return true
+    if (tab === 'upcoming') return canEdit(o)
+    return !canEdit(o)
+  })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <div
-        style={{
-          maxWidth: 1580,
-          margin: '0 auto',
-          padding: '40px 24px',
-          display: 'flex',
-          gap: 32,
-          alignItems: 'flex-start',
-        }}
-      >
-        {/* ── Left sidebar ── */}
-        <aside style={{ width: 240, flexShrink: 0 }}>
-          {/* Profile card */}
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: '20px 16px',
-              marginBottom: 12,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: '50%',
-                  background: 'var(--primary)',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '1.2rem',
-                }}
-              >
-                {(profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'U')[0].toUpperCase()}
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}</div>
-                <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>{profile?.role}</div>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
+        <Sidebar totalCommission={totalCommission} />
 
-          {/* Nav menu */}
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              overflow: 'hidden',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-            }}
-          >
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '13px 16px',
-                  textDecoration: 'none',
-                  background: item.active ? 'var(--primary)' : '#fff',
-                  color: item.active ? '#fff' : '#374151',
-                  borderBottom: '1px solid #f3f4f6',
-                  fontSize: '0.875rem',
-                  fontWeight: item.active ? 600 : 400,
-                  transition: 'background 0.15s',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {item.badge && (
-                    <span
-                      style={{
-                        background: item.active ? 'rgba(255,255,255,0.25)' : 'var(--primary-light)',
-                        color: item.active ? '#fff' : 'var(--primary-dark)',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: 20,
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                  <span style={{ opacity: 0.5, fontSize: '0.75rem' }}>›</span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </aside>
-
-        {/* ── Right content ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 20,
-            }}
-          >
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>Client Orders</h1>
-              <p style={{ color: '#6b7280', marginTop: 6, fontSize: '1rem' }}>
-                View specific orders for this client
-              </p>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 m-0">Client Orders</h1>
+              <p className="text-gray-500 mt-2 text-[0.95rem]">View specific orders for this client</p>
             </div>
             <Link
               href="/clients"
-              style={{
-                padding: '12px 28px',
-                background: '#f3f4f6',
-                color: '#374151',
-                borderRadius: 10,
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: '1rem',
-              }}
+              className="w-full sm:w-auto px-6 py-3 bg-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-300 transition-colors text-center"
             >
               ← Back to Clients
             </Link>
           </div>
 
           {/* Tab bar */}
-          <div
-            style={{
-              display: 'flex',
-              borderBottom: '2px solid #e5e5e5',
-              marginBottom: 20,
-              gap: 0,
-            }}
-          >
+          <div className="flex overflow-x-auto border-b-2 border-gray-200 mb-6 gap-2 hide-scrollbar">
             {(
               [
-                { key: 'upcoming', label: `Upcoming Orders (${orders.filter((o) => canEdit(o)).length})` },
-                { key: 'previous', label: `Previous Orders (${orders.filter((o) => !canEdit(o)).length})` },
-                { key: 'all', label: `All Orders (${orders.length})` },
+                { key: 'upcoming', label: `Upcoming (${orders.filter((o) => canEdit(o)).length})` },
+                { key: 'previous', label: `Previous (${orders.filter((o) => !canEdit(o)).length})` },
+                { key: 'all', label: `All (${orders.length})` },
               ] as const
             ).map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  background: 'none',
-                  fontWeight: tab === key ? 600 : 400,
-                  fontSize: '0.875rem',
-                  color: tab === key ? 'var(--primary)' : '#6b7280',
-                  borderBottom: tab === key ? '2.5px solid var(--primary)' : '2.5px solid transparent',
-                  marginBottom: -2,
-                  cursor: 'pointer',
-                  transition: 'color 0.15s',
-                }}
+                className={`px-4 py-2.5 font-semibold text-sm whitespace-nowrap border-b-2 transition-colors ${
+                  tab === key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+                style={{ marginBottom: '-2px' }}
               >
                 {label}
               </button>
@@ -253,50 +132,24 @@ export default function ClientOrdersPage() {
 
           {/* Order cards */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: 48, color: '#6b7280' }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  border: '3px solid var(--primary-mid)',
-                  borderTop: '3px solid var(--primary)',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  margin: '0 auto 12px',
-                }}
-              />
-              Loading orders…
-            </div>
-          ) : orders.length === 0 ? (
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: 12,
-                padding: 48,
-                textAlign: 'center',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              }}
-            >
-              <div style={{ fontSize: '3rem', marginBottom: 12 }}>📦</div>
-              <h3 style={{ fontWeight: 600, marginBottom: 8 }}>No orders yet</h3>
-              <p style={{ color: '#6b7280', marginBottom: 16 }}>Start by creating your first order</p>
+             <div className="flex items-center justify-center p-20 flex-1">
+                 <div className="w-10 h-10 border-4 border-primary-mid border-t-primary rounded-full animate-spin mx-auto mb-4" />
+             </div>
+          ) : displayOrders.length === 0 ? (
+            <div className="bg-white rounded-xl p-12 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-gray-50 flex flex-col items-center justify-center">
+              <div className="text-5xl mb-4">📦</div>
+              <h3 className="font-bold text-lg mb-2 text-gray-900">No orders yet</h3>
+              <p className="text-gray-500 mb-6 text-sm">Start by creating your first order for this client</p>
               <Link
                 href="/orders/new"
-                style={{
-                  padding: '10px 24px',
-                  background: 'var(--primary)',
-                  color: '#fff',
-                  borderRadius: 8,
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                }}
+                className="px-6 py-2.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark transition"
               >
-                Create Your First Order
+                Create Order
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {orders.map((order, idx) => {
+            <div className="flex flex-col gap-4">
+              {displayOrders.map((order: any, idx) => {
                 let stepIndex = 0
                 const s = (order.status || '').toLowerCase()
                 if (s === 'preparing') stepIndex = 1
@@ -304,141 +157,58 @@ export default function ClientOrdersPage() {
                 if (s === 'delivered') stepIndex = 3
 
                 return (
-                  <div
-                    key={order.id}
-                    style={{
-                      background: '#fff',
-                      borderRadius: 12,
-                      padding: '20px 24px',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                      border: '1px solid #f0f0f0',
-                    }}
-                  >
-                    {/* Row 1: Order info + actions */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: '50%',
-                            background: 'var(--primary-light)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1.3rem',
-                          }}
-                        >
-                          📦
-                        </div>
+                  <div key={order.id} className="bg-white rounded-xl p-5 md:p-6 shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-gray-50 flex flex-col relative overflow-hidden">
+                    
+                    {/* Header Row */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="w-11 h-11 rounded-full bg-primary-light flex items-center justify-center text-xl shrink-0">📦</div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '1rem' }}>
-                            Order no #{order.id?.slice(0, 6).toUpperCase() ?? '------'}
+                          <div className="font-extrabold text-gray-900 text-sm md:text-base">
+                            Order #{order.id?.slice(0, 8).toUpperCase() ?? '------'}
                           </div>
-                          <div style={{ color: '#374151', fontWeight: 600, fontSize: '0.95rem' }}>
+                          <div className="text-primary-dark font-black text-sm mt-0.5">
                             RM {order.total_amount?.toFixed(2) ?? '0.00'}
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
                         <button
-                          onClick={() => {
-                            setSelectedOrder(order)
-                            setShowDetailModal(true)
-                          }}
-                          style={{
-                            padding: '8px 20px',
-                            background: 'var(--primary)',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 8,
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 6px rgba(46,189,142,0.2)'
-                          }}
+                          onClick={() => { setSelectedOrder(order); setShowDetailModal(true); }}
+                          className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white border-none rounded-lg font-bold text-xs cursor-pointer shadow-sm hover:bg-primary-dark transition text-center"
                         >
-                          Order Details
+                          Details
                         </button>
-                        {/* Status-based cancellation logic: 0:Confirmed, 1:Preparing, 2:Picked up, 3:Delivered */}
-                        {stepIndex < 2 && (
+                        {stepIndex < 2 && canEdit(order) && (
                           <button
-                            onClick={() => handleDelete(order.id)}
-                            style={{
-                              padding: '8px 14px',
-                              background: 'none',
-                              border: 'none',
-                              color: '#ef4444',
-                              fontWeight: 700,
-                              fontSize: '0.875rem',
-                              cursor: 'pointer',
-                              textDecoration: 'none'
-                            }}
+                            onClick={() => promptDelete(order.id)}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border-none rounded-lg font-bold text-xs cursor-pointer transition text-center"
                           >
-                            Cancel Order
+                            Cancel
                           </button>
                         )}
                       </div>
                     </div>
 
-                    {/* Progress bar */}
-                    <div style={{ marginBottom: 14 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          position: 'relative',
-                        }}
-                      >
-                        {/* Background line */}
-                        <div style={{ position: 'absolute', top: 8, left: '12.5%', width: '75%', height: 2, background: '#e5e7eb', zIndex: 0 }} />
-
-                        {/* Active Progress line */}
-                        <div style={{ position: 'absolute', top: 8, left: '12.5%', width: `${(stepIndex / (STATUS_STEPS.length - 1)) * 75}%`, height: 2, background: 'var(--primary)', zIndex: 0, transition: 'width 0.3s' }} />
-
+                    {/* Progress Bar Container - Scrollable on very small screens */}
+                    <div className="mb-5 overflow-x-auto py-2 hide-scrollbar">
+                      <div className="flex items-start relative min-w-[280px]">
+                        <div className="absolute top-2.5 left-[12.5%] w-[75%] h-[2px] bg-gray-200 z-0" />
+                        <div 
+                          className="absolute top-2.5 left-[12.5%] h-[2px] bg-primary z-0 transition-all duration-300"
+                          style={{ width: `${(stepIndex / (STATUS_STEPS.length - 1)) * 75}%` }}
+                        />
                         {STATUS_STEPS.map((step, i) => {
                           const done = i <= stepIndex
                           const active = i === stepIndex
                           return (
-                            <div
-                              key={step}
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                flex: 1,
-                                position: 'relative',
-                                zIndex: 1,
-                              }}
-                            >
-                              {/* Dot */}
-                              <div
-                                style={{
-                                  width: 18,
-                                  height: 18,
-                                  borderRadius: '50%',
-                                  background: done ? 'var(--primary)' : '#e5e7eb',
-                                  border: active ? '3px solid var(--primary-dark)' : done ? '2px solid var(--primary-dark)' : '2px solid #d1d5db',
-                                  boxShadow: active ? '0 0 0 3px var(--primary-mid)' : 'none',
-                                }}
-                              />
-                              {/* Label */}
-                              <span
-                                style={{
-                                  marginTop: 6,
-                                  fontSize: '0.7rem',
-                                  fontWeight: active ? 700 : 400,
-                                  color: done ? 'var(--primary-dark)' : '#9ca3af',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
+                            <div key={step} className="flex flex-col items-center flex-1 relative z-10">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 bg-white ${active ? 'border-primary ring-2 ring-primary-light ring-offset-1' : done ? 'border-primary' : 'border-gray-300'}`}>
+                                <div className={`w-2.5 h-2.5 rounded-full ${done ? 'bg-primary' : 'bg-transparent'}`} />
+                              </div>
+                              <span className={`mt-2 text-[0.65rem] font-bold ${active ? 'text-primary-dark' : done ? 'text-primary' : 'text-gray-400'}`}>
                                 {step}
                               </span>
                             </div>
@@ -447,26 +217,24 @@ export default function ClientOrdersPage() {
                       </div>
                     </div>
 
-                    {/* Meta row */}
-                    <div style={{ fontSize: '0.78rem', color: '#6b7280', display: 'flex', gap: 8 }}>
-                      <span>
-                        {order.quantity ?? 1} Item{(order.quantity ?? 1) !== 1 ? 's' : ''}
-                      </span>
-                      <span>•</span>
-                      <span>{order.clients?.company_name ?? 'Client'}</span>
-                      <span>•</span>
-                      <span>
-                        Ordered {format(new Date(order.created_at), 'MMM d, yyyy')}
-                      </span>
+                    {/* Meta Footer */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 font-medium bg-gray-50 -mx-5 -mb-5 p-3 md:px-6 md:py-3 mt-auto">
+                      <span>{order.quantity ?? Object.values(order.items || {}).reduce((s:any, item:any)=> s + item.quantity, 0)} Items</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="truncate max-w-[120px] sm:max-w-none">{order.clients?.company_name ?? 'Client'}</span>
+                      <span className="text-gray-300">•</span>
+                      <span>{format(new Date(order.created_at), 'MMM d, yyyy')}</span>
+                      
                       {order.commission_amount > 0 && (
                         <>
-                          <span>•</span>
-                          <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>
-                            +RM {order.commission_amount?.toFixed(2)} commission
+                          <span className="text-gray-300 hidden sm:inline">•</span>
+                          <span className="text-primary-dark font-bold ml-auto sm:ml-0 bg-primary-light/30 px-2 py-0.5 rounded-md">
+                            +RM {order.commission_amount?.toFixed(2)} comm.
                           </span>
                         </>
                       )}
                     </div>
+
                   </div>
                 )
               })}
@@ -475,89 +243,75 @@ export default function ClientOrdersPage() {
         </div>
       </div>
 
-      {/* ── Order Detail Modal ── */}
-      {showDetailModal && selectedOrder && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: 20
-        }}>
-          <div style={{
-            background: '#fff',
-            width: '100%',
-            maxWidth: 680,
-            borderRadius: 20,
-            overflow: 'hidden',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: '90vh'
-          }}>
-            <div style={{ padding: '24px 32px', background: 'var(--primary-dark)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Order Details</h2>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>#{selectedOrder.id?.slice(0, 8).toUpperCase()}</div>
-              </div>
-              <button onClick={() => setShowDetailModal(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '2rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
-            </div>
-
-            <div style={{ padding: 32, overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Client</div>
-                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#111827' }}>{selectedOrder.clients?.company_name}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Order Date</div>
-                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#111827' }}>{format(new Date(selectedOrder.created_at), 'MMMM d, yyyy')}</div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Items Ordered</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {(selectedOrder.items || []).map((item: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 20px', background: '#f9fafb', borderRadius: 12, border: '1px solid #f0f0f0' }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#111827' }}>{item.item_name}</div>
-                        <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: 2 }}>{item.quantity} CTN × RM {item.price.toFixed(2)}</div>
-                      </div>
-                      <div style={{ fontWeight: 900, color: 'var(--primary-dark)', fontSize: '1.1rem' }}>RM {(item.quantity * item.price).toFixed(2)}</div>
+      <Modal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} title="Order Details">
+          {selectedOrder && (
+              <div className="flex flex-col max-h-[70vh] -mx-6 -mt-2">
+                 {/* Header Banner */}
+                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10">
+                    <div>
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Order ID</div>
+                        <div className="font-extrabold text-primary-dark text-sm">#{selectedOrder.id?.slice(0, 8).toUpperCase()}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="text-right">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date</div>
+                        <div className="font-bold text-gray-900 text-sm">{format(new Date(selectedOrder.created_at), 'MMM d, yyyy')}</div>
+                    </div>
+                 </div>
 
-              <div style={{ borderTop: '2px dashed #f3f4f6', paddingTop: 20, marginTop: 32 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 600 }}>Total Commission</span>
-                  <span style={{ fontSize: '1.1rem', color: 'var(--primary-dark)', fontWeight: 800 }}>RM {selectedOrder.commission_amount?.toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '1.2rem', color: '#111827', fontWeight: 900 }}>Total Paid</span>
-                  <span style={{ fontSize: '1.5rem', color: 'var(--primary-dark)', fontWeight: 900 }}>RM {selectedOrder.total_amount?.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
+                 <div className="p-6 overflow-y-auto">
+                    <div className="mb-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Client</div>
+                        <div className="font-extrabold text-gray-900 text-lg">{selectedOrder.clients?.company_name}</div>
+                    </div>
 
-            <div style={{ padding: '24px 32px', borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowDetailModal(false)} style={{ padding: '12px 32px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 800, cursor: 'pointer' }}>Close</button>
-            </div>
+                    <div className="space-y-3 mb-8">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Items Ordered</div>
+                        {(selectedOrder.items || []).map((item: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div>
+                                    <div className="font-bold text-gray-900 text-sm">{item.item_name}</div>
+                                    <div className="text-xs text-gray-500 mt-0.5 font-medium">{item.quantity} CTN × RM {item.price?.toFixed(2)}</div>
+                                </div>
+                                <div className="font-black text-gray-900 text-sm">
+                                    RM {(item.quantity * item.price).toFixed(2)}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="border-t-2 border-dashed border-gray-200 pt-5 space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="font-bold text-gray-500">Comm. ({selectedOrder.commission_rate ?? profile?.commission_rate ?? 5}%)</span>
+                            <span className="font-black text-primary-dark">RM {selectedOrder.commission_amount?.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="font-extrabold text-gray-900 text-base">Total Due</span>
+                            <span className="font-black text-gray-900 text-xl">RM {selectedOrder.total_amount?.toFixed(2)}</span>
+                        </div>
+                    </div>
+                 </div>
+              </div>
+          )}
+      </Modal>
+
+      <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={confirmAction.title}>
+          <div className="space-y-6">
+              <p className="text-gray-600">{confirmAction.message}</p>
+              <div className="flex gap-3 pt-2">
+                  <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">Cancel</button>
+                  <button onClick={() => { setIsConfirmModalOpen(false); confirmAction.onConfirm(); }} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition">Confirm Delete</button>
+              </div>
           </div>
-        </div>
-      )}
+      </Modal>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        a:hover { opacity: 0.85; }
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
       `}</style>
     </div>
   )

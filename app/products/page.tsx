@@ -11,6 +11,7 @@ import {
     updateProductAdmin,
     deleteProductAdmin
 } from '@/actions/products'
+import Modal from '@/components/Modal'
 
 interface Product {
     id: string
@@ -25,7 +26,7 @@ export default function ProductsPage() {
     const { profile } = useAuth()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
-    const [showModal, setShowModal] = useState(false)
+    const [showFormModal, setShowFormModal] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [formData, setFormData] = useState({
         name: '',
@@ -35,6 +36,10 @@ export default function ProductsPage() {
     })
     const [productFile, setProductFile] = useState<File | null>(null)
     const [saving, setSaving] = useState(false)
+
+    // Delete Confirm Modal
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void }>({ title: '', message: '', onConfirm: () => { } })
 
     const isAdmin = profile?.role === 'admin'
 
@@ -74,7 +79,7 @@ export default function ProductsPage() {
             })
         }
         setProductFile(null)
-        setShowModal(true)
+        setShowFormModal(true)
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +138,7 @@ export default function ProductsPage() {
             if (error) throw new Error(error)
 
             toast.success(editingProduct ? 'Product updated!' : 'Product added!')
-            setShowModal(false)
+            setShowFormModal(false)
             loadProducts()
         } catch (err: any) {
             toast.error(err.message || 'Operation failed')
@@ -142,144 +147,92 @@ export default function ProductsPage() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Delete this product permanently?')) return
-        try {
-            const { error } = await deleteProductAdmin(id)
-            if (error) throw new Error(error)
-            toast.success('Product deleted')
-            loadProducts()
-        } catch (err: any) {
-            toast.error('Delete failed: ' + err.message)
-        }
+    const promptDelete = (id: string) => {
+        setConfirmAction({
+            title: 'Delete Product',
+            message: 'Delete this product permanently? This cannot be undone.',
+            onConfirm: async () => {
+                try {
+                    const { error } = await deleteProductAdmin(id)
+                    if (error) throw new Error(error)
+                    toast.success('Product deleted')
+                    loadProducts()
+                } catch (err: any) {
+                    toast.error('Delete failed: ' + err.message)
+                }
+            }
+        })
+        setIsConfirmModalOpen(true)
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
 
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 32
-                }}>
+            <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 md:py-8 flex-1">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
                     <div>
-                        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: '#111827' }}>Products</h1>
-                        <p style={{ color: '#6b7280', marginTop: 4 }}>Manage inventory and pricing per carton</p>
+                        <h1 className="text-2xl md:text-3xl font-extrabold m-0 text-gray-900 leading-tight">Products</h1>
+                        <p className="text-gray-500 mt-1 md:mt-2 text-sm md:text-base">Manage inventory and pricing per carton</p>
                     </div>
                     {isAdmin && (
                         <button
                             onClick={() => handleOpenModal()}
-                            style={{
-                                padding: '12px 24px',
-                                background: 'var(--primary)',
-                                color: '#fff',
-                                borderRadius: 10,
-                                border: 'none',
-                                fontWeight: 700,
-                                fontSize: '1rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                boxShadow: '0 4px 12px rgba(var(--primary-rgb), 0.2)'
-                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white font-bold text-sm rounded-xl shadow-[0_4px_12px_rgba(46,189,142,0.25)] hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
                         >
-                            <span style={{ fontSize: '1.2rem' }}>+</span> Add Product
+                            <span className="text-lg leading-none">+</span> Add Product
                         </button>
                     )}
                 </div>
 
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: 100 }}>
-                        <div style={{
-                            width: 40, height: 40,
-                            border: '3px solid var(--primary-mid)',
-                            borderTop: '3px solid var(--primary)',
-                            borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite',
-                            margin: '0 auto'
-                        }} />
-                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    <div className="flex items-center justify-center p-20 flex-1">
+                        <div className="w-10 h-10 border-4 border-primary-mid border-t-primary rounded-full animate-spin mx-auto mb-4" />
                     </div>
                 ) : products.length === 0 ? (
-                    <div style={{
-                        background: '#fff', borderRadius: 20, padding: 80, textAlign: 'center',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
-                    }}>
-                        <div style={{ fontSize: '4rem', marginBottom: 20 }}>🍦</div>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>No products found</h3>
-                        <p style={{ color: '#6b7280' }}>Start adding products to populate the list</p>
+                    <div className="bg-white rounded-2xl p-10 md:p-20 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-gray-50 flex flex-col items-center justify-center">
+                        <div className="text-5xl md:text-6xl mb-4 md:mb-6">🍦</div>
+                        <h3 className="text-xl md:text-2xl font-bold mb-2">No products found</h3>
+                        <p className="text-gray-500 text-sm md:text-base">Start adding products to populate the list</p>
                     </div>
                 ) : (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                        gap: 24
-                    }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                         {products.map(p => {
                             const pricePerPcs = p.price_per_ctn / p.units_per_ctn
                             return (
-                                <div key={p.id} style={{
-                                    background: '#fff',
-                                    borderRadius: 16,
-                                    overflow: 'hidden',
-                                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                                    border: '1px solid #f0f0f0',
-                                    transition: 'transform 0.2s, box-shadow 0.2s',
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}>
-                                    <div style={{
-                                        height: 200,
-                                        background: '#f9fafb',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        position: 'relative'
-                                    }}>
+                                <div key={p.id} className="bg-white rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col hover:shadow-lg transition-shadow duration-300">
+                                    <div className="h-48 md:h-52 bg-gray-50 flex items-center justify-center relative overflow-hidden group">
                                         {p.photo_url ? (
-                                            <img src={p.photo_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                            <img src={p.photo_url} alt={p.name} className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" />
                                         ) : (
-                                            <div style={{ fontSize: '3rem', opacity: 0.2 }}>📦</div>
+                                            <div className="text-5xl opacity-20">📦</div>
                                         )}
                                     </div>
 
-                                    <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>{p.name}</h3>
+                                    <div className="p-4 md:p-5 flex-1 flex flex-col">
+                                        <div className="flex justify-between items-start mb-3 gap-2">
+                                            <h3 className="m-0 text-base md:text-lg font-bold text-gray-900 leading-tight flex-1">{p.name}</h3>
                                             {isAdmin && (
-                                                <div style={{ display: 'flex', gap: 6 }}>
-                                                    <button onClick={() => handleOpenModal(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✏️</button>
-                                                    <button onClick={() => handleDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>🗑️</button>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <button onClick={() => handleOpenModal(p)} className="bg-gray-100 hover:bg-gray-200 w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer transition-colors text-sm shrink-0">✏️</button>
+                                                    <button onClick={() => promptDelete(p.id)} className="bg-red-50 hover:bg-red-100 w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer transition-colors text-sm shrink-0">🗑️</button>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div style={{ marginBottom: 16 }}>
-                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unit per Carton</div>
-                                            <div style={{ fontWeight: 600 }}>{p.units_per_ctn} pcs / CTN</div>
+                                        <div className="mb-4">
+                                            <div className="text-[0.65rem] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Unit per Carton</div>
+                                            <div className="font-semibold text-gray-700 text-sm md:text-base">{p.units_per_ctn} pcs / CTN</div>
                                         </div>
 
-                                        <div style={{
-                                            marginTop: 'auto',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'flex-end',
-                                            background: 'var(--primary-light)',
-                                            padding: 12,
-                                            borderRadius: 12
-                                        }}>
+                                        <div className="mt-auto flex justify-between items-end bg-primary-light/50 p-3 md:p-4 rounded-xl border border-primary-light">
                                             <div>
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--primary-dark)', fontWeight: 600 }}>Per Carton</div>
-                                                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary-dark)' }}>${p.price_per_ctn.toFixed(2)}</div>
+                                                <div className="text-[0.65rem] md:text-xs font-bold text-primary-dark uppercase tracking-wide">Per Carton</div>
+                                                <div className="text-lg md:text-xl font-black text-primary-dark leading-none mt-1">RM{p.price_per_ctn.toFixed(2)}</div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--primary-dark)', fontWeight: 600 }}>Per Piece</div>
-                                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary-dark)' }}>${pricePerPcs.toFixed(2)}</div>
+                                            <div className="text-right">
+                                                <div className="text-[0.65rem] md:text-xs font-bold text-primary-dark uppercase tracking-wide">Per Piece</div>
+                                                <div className="text-sm md:text-base font-bold text-primary-dark leading-none mt-1">RM{pricePerPcs.toFixed(2)}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -290,97 +243,78 @@ export default function ProductsPage() {
                 )}
             </div>
 
-            {/* Modal */}
-            {showModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(4px)', zIndex: 1000
-                }}>
-                    <div style={{
-                        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-                        overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-                    }}>
-                        <div style={{ padding: '24px 32px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h2 style={{ margin: 0, fontWeight: 800 }}>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-                            <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            {/* Product Edit/Create Form Modal */}
+            <Modal isOpen={showFormModal} onClose={() => setShowFormModal(false)} title={editingProduct ? 'Edit Product' : 'Add New Product'}>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Product Name</label>
+                        <input
+                            required
+                            type="text"
+                            value={formData.name}
+                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                            placeholder="e.g. Vanilla Ice Cream"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Unit per Carton</label>
+                            <input
+                                required
+                                type="number"
+                                min="1"
+                                value={formData.units_per_ctn}
+                                onChange={e => setFormData({ ...formData, units_per_ctn: parseInt(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                            />
                         </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Price per CTN (RM)</label>
+                            <input
+                                required
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={formData.price_per_ctn}
+                                onChange={e => setFormData({ ...formData, price_per_ctn: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                            />
+                        </div>
+                    </div>
 
-                        <form onSubmit={handleSubmit} style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                            <div>
-                                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.9rem' }}>Product Name</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    style={{ width: '100%', padding: '12px', border: '1.5px solid #e5e7eb', borderRadius: 10, outline: 'none' }}
-                                    placeholder="e.g. Vanilla Ice Cream"
-                                />
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">Product Photo</label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative group">
+                            <input type="file" accept="image/jpeg, image/png, image/jpg" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📷</div>
+                            <div className="text-xs font-semibold text-gray-500">
+                                {productFile ? productFile.name : 'Click to upload image (JPG/PNG < 2MB)'}
                             </div>
+                        </div>
+                    </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.9rem' }}>Unit per Carton</label>
-                                    <input
-                                        type="number"
-                                        value={formData.units_per_ctn}
-                                        onChange={e => setFormData({ ...formData, units_per_ctn: parseInt(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '12px', border: '1.5px solid #e5e7eb', borderRadius: 10, outline: 'none' }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.9rem' }}>Price per CTN ($)</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.price_per_ctn}
-                                        onChange={e => setFormData({ ...formData, price_per_ctn: parseFloat(e.target.value) || 0 })}
-                                        style={{ width: '100%', padding: '12px', border: '1.5px solid #e5e7eb', borderRadius: 10, outline: 'none' }}
-                                    />
-                                </div>
-                            </div>
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="w-full py-3 bg-primary text-white font-bold rounded-xl mt-4 disabled:opacity-50 hover:bg-primary-dark transition-colors shadow-sm"
+                    >
+                        {saving ? 'Processing...' : editingProduct ? 'Update Product' : 'Create Product'}
+                    </button>
+                </form>
+            </Modal>
 
-                            <div>
-                                <label style={{ display: 'block', fontWeight: 600, marginBottom: 6, fontSize: '0.9rem' }}>Product Photo</label>
-                                <div style={{
-                                    border: '2px dashed #e5e7eb',
-                                    borderRadius: 12,
-                                    padding: 20,
-                                    textAlign: 'center',
-                                    background: '#f9fafb',
-                                    cursor: 'pointer',
-                                    position: 'relative'
-                                }}>
-                                    <input type="file" accept="image/*" onChange={handleFileChange} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
-                                    <div style={{ fontSize: '1.5rem' }}>📷</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 4 }}>
-                                        {productFile ? productFile.name : 'Click to upload image'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                style={{
-                                    marginTop: 8,
-                                    padding: '14px',
-                                    background: saving ? '#9ca3af' : 'var(--primary)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 12,
-                                    fontWeight: 800,
-                                    fontSize: '1rem',
-                                    cursor: saving ? 'not-allowed' : 'pointer',
-                                    transition: 'transform 0.1s'
-                                }}
-                            >
-                                {saving ? 'Processing...' : editingProduct ? 'Update Product' : 'Create Product'}
-                            </button>
-                        </form>
+            {/* Confirm Actions Modal */}
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={confirmAction.title}>
+                <div className="space-y-6">
+                    <p className="text-gray-600">{confirmAction.message}</p>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">Cancel</button>
+                        <button onClick={() => { setIsConfirmModalOpen(false); confirmAction.onConfirm(); }} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition">Confirm Delete</button>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     )
 }

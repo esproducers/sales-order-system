@@ -10,6 +10,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { updateClientStatusAdmin } from '@/actions/clients'
+import Modal from '@/components/Modal'
 
 export default function AdminClientsPage() {
     const { profile, loading: authLoading } = useAuth()
@@ -23,10 +24,14 @@ export default function AdminClientsPage() {
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo] = useState('')
 
-    // Reassign modal state
+    // Modal state
     const [reassignClient, setReassignClient] = useState<any>(null)
     const [selectedAgentId, setSelectedAgentId] = useState('')
     const [reassigning, setReassigning] = useState(false)
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
+
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const [confirmAction, setConfirmAction] = useState<{ title: string, message: string, onConfirm: () => void }>({ title: '', message: '', onConfirm: () => { } })
 
     useEffect(() => {
         if (!authLoading && profile) {
@@ -67,12 +72,15 @@ export default function AdminClientsPage() {
     const openReassign = (client: any) => {
         setReassignClient(client)
         setSelectedAgentId(client.agent_id || '')
+        setIsReassignModalOpen(true)
     }
 
-    const handleReassign = async () => {
+    const handleReassign = async (e: React.FormEvent) => {
+        e.preventDefault()
         if (!selectedAgentId || !reassignClient) return
         if (selectedAgentId === reassignClient.agent_id) {
             toast('No change — same agent selected.')
+            setIsReassignModalOpen(false)
             return
         }
         try {
@@ -83,6 +91,7 @@ export default function AdminClientsPage() {
                 .eq('id', reassignClient.id)
             if (error) throw error
             toast.success(`Client reassigned successfully!`)
+            setIsReassignModalOpen(false)
             setReassignClient(null)
             loadData()
         } catch (err: any) {
@@ -91,22 +100,29 @@ export default function AdminClientsPage() {
             setReassigning(false)
         }
     }
-    const handleToggleActive = async (client: any) => {
+
+    const promptToggleActive = (client: any) => {
         const isCurrentlyDeactivated = client.company_name?.startsWith('(INACTIVE) ')
         const action = isCurrentlyDeactivated ? 'Reactivate' : 'Deactivate'
-        if (!confirm(`${action} this client?`)) return
-        try {
-            setLoading(true)
-            const { error } = await updateClientStatusAdmin(client.id, isCurrentlyDeactivated)
-            if (error) throw error
-            toast.success(`Client ${action.toLowerCase()}d successfully!`)
-            loadData()
-        } catch (err: any) {
-            console.error('Client toggle error:', err)
-            toast.error(`Failed to ${action.toLowerCase()} client`)
-        } finally {
-            setLoading(false)
-        }
+        setConfirmAction({
+            title: `${action} Client`,
+            message: `Are you sure you want to ${action.toLowerCase()} this client?`,
+            onConfirm: async () => {
+                try {
+                    setLoading(true)
+                    const { error } = await updateClientStatusAdmin(client.id, isCurrentlyDeactivated)
+                    if (error) throw error
+                    toast.success(`Client ${action.toLowerCase()}d successfully!`)
+                    loadData()
+                } catch (err: any) {
+                    console.error('Client toggle error:', err)
+                    toast.error(`Failed to ${action.toLowerCase()} client`)
+                } finally {
+                    setLoading(false)
+                }
+            }
+        })
+        setIsConfirmModalOpen(true)
     }
 
     const uniqueAgents = Array.from(new Set(clients.map(c => c.profiles?.name).filter(Boolean))).sort()
@@ -142,15 +158,11 @@ export default function AdminClientsPage() {
 
     if (loading || authLoading) {
         return (
-            <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
                 <Navbar />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ width: 40, height: 40, border: '3px solid var(--primary-mid)', borderTop: '3px solid var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-                        <p style={{ color: '#6b7280' }}>Loading client data…</p>
-                    </div>
+                <div className="flex items-center justify-center p-20 flex-1">
+                    <p className="text-gray-500">Loading client data…</p>
                 </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         )
     }
@@ -162,38 +174,38 @@ export default function AdminClientsPage() {
                 <AdminSidebar />
                 <div className="flex-1 min-w-0">
                     {/* Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
-                            <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>Client Management</h1>
-                            <p style={{ color: '#6b7280', marginTop: 4, fontSize: '0.95rem' }}>Management of all clients in the system</p>
+                            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 m-0">Client Management</h1>
+                            <p className="text-gray-500 mt-2 text-[0.95rem]">Management of all clients in the system</p>
                         </div>
-                        <div style={{ display: 'flex', gap: 16 }}>
-                            <div style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#111827' }}>{clients.length}</div>
+                        <div className="flex gap-4 w-full sm:w-auto">
+                            <div className="bg-white rounded-xl py-3 px-5 sm:px-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)] flex-1 sm:flex-none border border-gray-50">
+                                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total</div>
+                                <div className="text-xl sm:text-2xl font-black text-gray-900 mt-1">{clients.length}</div>
                             </div>
-                            <div style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Active</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary-dark)' }}>{activeCount}</div>
+                            <div className="bg-white rounded-xl py-3 px-5 sm:px-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)] flex-1 sm:flex-none border border-gray-50">
+                                <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Active</div>
+                                <div className="text-xl sm:text-2xl font-black text-primary-dark mt-1">{activeCount}</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Filters */}
-                    <div style={{ background: '#fff', borderRadius: 14, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                            <div style={{ flex: '1 1 200px' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Search Company / SSM</label>
-                                <input type="text" placeholder="e.g. Acme Corp" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem' }} />
+                    <div className="bg-white rounded-xl p-4 md:p-6 shadow-[0_1px_4px_rgba(0,0,0,0.06)] mb-6 flex flex-col gap-4 border border-gray-50">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="sm:col-span-2 lg:col-span-1">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Search</label>
+                                <input type="text" placeholder="Company / SSM" value={search} onChange={e => setSearch(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition" />
                             </div>
-                            <div style={{ flex: '1 1 200px' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Filter by Agent</label>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Agent</label>
                                 <select
                                     value=""
                                     onChange={(e) => {
                                         if (e.target.value && !selectedAgents.includes(e.target.value)) setSelectedAgents([...selectedAgents, e.target.value]);
                                     }}
-                                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem', cursor: 'pointer', appearance: 'none' }}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition bg-white"
                                 >
                                     <option value="">+ Add Agent...</option>
                                     {uniqueAgents.filter(a => !selectedAgents.includes(a as string)).map(a => (
@@ -201,14 +213,14 @@ export default function AdminClientsPage() {
                                     ))}
                                 </select>
                             </div>
-                            <div style={{ flex: '1 1 200px' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Filter Join Month</label>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Month</label>
                                 <select
                                     value=""
                                     onChange={(e) => {
                                         if (e.target.value && !selectedMonths.includes(e.target.value)) setSelectedMonths([...selectedMonths, e.target.value]);
                                     }}
-                                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem', cursor: 'pointer', appearance: 'none' }}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition bg-white"
                                 >
                                     <option value="">+ Add Month...</option>
                                     {monthsList.filter(m => !selectedMonths.includes(m)).map(m => (
@@ -216,134 +228,118 @@ export default function AdminClientsPage() {
                                     ))}
                                 </select>
                             </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Join Date From</label>
-                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem' }} />
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Date From</label>
+                                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition bg-white" />
                             </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Join Date To</label>
-                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #d1d5db', outline: 'none', fontSize: '0.9rem' }} />
+                            <div className="sm:col-span-2 lg:col-span-1">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Date To</label>
+                                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition bg-white" />
                             </div>
                         </div>
 
                         {(selectedAgents.length > 0 || selectedMonths.length > 0 || dateFrom || dateTo) && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
-                                <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'flex', alignItems: 'center', marginRight: 4 }}>Active Filters:</span>
+                            <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+                                <span className="text-xs text-gray-500 flex items-center mr-1">Filters:</span>
                                 {selectedAgents.map(a => (
-                                    <div key={a} style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        👨‍💼 {a} <button onClick={() => setSelectedAgents(selectedAgents.filter(x => x !== a))} style={{ background: 'none', border: 'none', color: '#15803d', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                    <div key={a} className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border border-green-200">
+                                        👨‍💼 {a} <button onClick={() => setSelectedAgents(selectedAgents.filter(x => x !== a))} className="hover:text-green-900 border-none bg-transparent cursor-pointer">×</button>
                                     </div>
                                 ))}
                                 {selectedMonths.map(m => (
-                                    <div key={m} style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        📅 {m} <button onClick={() => setSelectedMonths(selectedMonths.filter(x => x !== m))} style={{ background: 'none', border: 'none', color: '#b45309', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                    <div key={m} className="bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border border-yellow-200">
+                                        📅 {m} <button onClick={() => setSelectedMonths(selectedMonths.filter(x => x !== m))} className="hover:text-yellow-900 border-none bg-transparent cursor-pointer">×</button>
                                     </div>
                                 ))}
                                 {dateFrom && (
-                                    <div style={{ background: '#f3e8ff', color: '#7e22ce', padding: '4px 10px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        📆 From: {dateFrom} <button onClick={() => setDateFrom('')} style={{ background: 'none', border: 'none', color: '#7e22ce', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                    <div className="bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border border-purple-200">
+                                        📆 From: {dateFrom} <button onClick={() => setDateFrom('')} className="hover:text-purple-900 border-none bg-transparent cursor-pointer">×</button>
                                     </div>
                                 )}
                                 {dateTo && (
-                                    <div style={{ background: '#f3e8ff', color: '#7e22ce', padding: '4px 10px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        📆 To: {dateTo} <button onClick={() => setDateTo('')} style={{ background: 'none', border: 'none', color: '#7e22ce', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                    <div className="bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border border-purple-200">
+                                        📆 To: {dateTo} <button onClick={() => setDateTo('')} className="hover:text-purple-900 border-none bg-transparent cursor-pointer">×</button>
                                     </div>
                                 )}
-                                <button onClick={() => { setSelectedAgents([]); setSelectedMonths([]); setDateFrom(''); setDateTo(''); }} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline', padding: '2px 6px' }}>Clear All</button>
+                                <button onClick={() => { setSelectedAgents([]); setSelectedMonths([]); setDateFrom(''); setDateTo(''); }} className="text-gray-500 hover:text-gray-900 bg-transparent border-none text-xs cursor-pointer underline">Clear All</button>
                             </div>
                         )}
                     </div>
 
-                    {/* Table */}
-                    <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead style={{ background: '#f9fafb' }}>
-                                <tr>
-                                    {['Company', 'SSM ID', 'Phone', 'Agent', 'Status', 'Added', 'Action'].map(h => (
-                                        <th key={h} style={{ padding: '14px 20px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
+                    <div className="bg-transparent md:bg-white md:rounded-xl md:shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+                        <div className="flex flex-col">
+                            <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1.5fr_0.8fr_1fr_1fr] bg-gray-50 border-b border-gray-100">
+                                {['Company', 'SSM ID', 'Phone', 'Agent', 'Status', 'Added', 'Action'].map((h, i) => (
+                                    <div key={h} className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase ${i === 6 ? 'text-right' : 'text-left'}`}>{h}</div>
+                                ))}
+                            </div>
+
+                            <div className="flex flex-col gap-3 md:gap-0">
                                 {filtered.map(client => {
                                     const isDeactivated = client.company_name?.startsWith('(INACTIVE) ');
                                     const displayName = isDeactivated ? client.company_name.replace('(INACTIVE) ', '') : client.company_name;
+
                                     return (
-                                        <tr key={client.id} style={{ borderBottom: '1px solid #f3f4f6', opacity: isDeactivated ? 0.5 : 1 }}>
-                                            <td style={{ padding: '14px 20px' }}>
-                                                <div style={{ fontWeight: 700, color: '#111827' }}>{displayName}</div>
-                                                {client.address && <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 2 }}>{client.address}</div>}
-                                            </td>
-                                            <td style={{ padding: '14px 20px', color: '#6b7280', fontFamily: 'monospace', fontSize: '0.88rem' }}>
+                                        <div key={client.id} className={`bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] md:shadow-none md:rounded-none md:border-b md:border-gray-100 p-4 md:p-0 md:grid md:grid-cols-[2fr_1fr_1fr_1.5fr_0.8fr_1fr_1fr] items-center text-sm ${isDeactivated ? 'opacity-50 bg-gray-50' : ''}`}>
+                                            {/* Company Info */}
+                                            <div className="md:px-4 md:py-3 mb-2 md:mb-0">
+                                                <div className="font-bold text-gray-900">{displayName}</div>
+                                                {client.address && <div className="text-xs text-gray-500 mt-0.5">{client.address}</div>}
+                                            </div>
+
+                                            {/* SSM */}
+                                            <div className="md:px-4 md:py-3 font-mono text-gray-500 mb-1 md:mb-0 text-xs md:text-sm">
+                                                <span className="md:hidden font-bold mr-1">SSM:</span>
                                                 {client.ssm_id ?? '—'}
-                                            </td>
-                                            <td style={{ padding: '14px 20px', color: '#6b7280', fontSize: '0.88rem' }}>
+                                            </div>
+
+                                            {/* Phone */}
+                                            <div className="md:px-4 md:py-3 text-gray-600 mb-2 md:mb-0">
+                                                <span className="md:hidden text-xs text-gray-500 font-bold mr-1 uppercase">Phone:</span>
                                                 {client.company_phone || client.contact_phone || '—'}
-                                            </td>
-                                            <td style={{ padding: '14px 20px' }}>
-                                                <div style={{ fontWeight: 600, color: '#374151', fontSize: '0.9rem' }}>{client.profiles?.name ?? '—'}</div>
-                                                {client.profiles?.email && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{client.profiles.email}</div>}
-                                            </td>
-                                            <td style={{ padding: '14px 20px' }}>
-                                                {isDeactivated ? (
-                                                    <span style={{ background: '#f3f4f6', color: '#6b7280', padding: '3px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>Inactive</span>
-                                                ) : (
-                                                    <span style={{ background: 'var(--primary-light)', color: 'var(--primary-dark)', padding: '3px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700 }}>Active</span>
-                                                )}
-                                            </td>
-                                            <td style={{ padding: '14px 20px', color: '#9ca3af', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                                            </div>
+
+                                            {/* Agent */}
+                                            <div className="md:px-4 md:py-3 mb-3 md:mb-0 border-t border-gray-50 md:border-0 pt-2 md:pt-0">
+                                                <span className="md:hidden text-xs text-gray-500 font-bold mr-1 uppercase">Agent:</span>
+                                                <span className="font-semibold text-gray-800">{client.profiles?.name ?? '—'}</span>
+                                                {client.profiles?.email && <div className="text-xs text-gray-400 mt-0.5">{client.profiles.email}</div>}
+                                            </div>
+
+                                            {/* Status */}
+                                            <div className="md:px-4 md:py-3 mb-2 md:mb-0">
+                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${isDeactivated ? 'bg-gray-100 text-gray-500' : 'bg-primary-light text-primary-dark'}`}>
+                                                     {isDeactivated ? 'INACTIVE' : 'ACTIVE'}
+                                                 </span>
+                                            </div>
+
+                                            {/* Added */}
+                                            <div className="hidden md:block md:px-4 md:py-3 text-gray-500 text-sm whitespace-nowrap">
                                                 {format(new Date(client.created_at), 'MMM d, yyyy')}
-                                            </td>
-                                            <td style={{ padding: '14px 20px', display: 'flex', gap: 8 }}>
-                                                <button
-                                                    onClick={() => openReassign(client)}
-                                                    style={{
-                                                        padding: '6px 14px',
-                                                        background: '#f3f4f6',
-                                                        color: '#374151',
-                                                        border: 'none',
-                                                        borderRadius: 8,
-                                                        fontWeight: 700,
-                                                        fontSize: '0.82rem',
-                                                        cursor: 'pointer',
-                                                        whiteSpace: 'nowrap',
-                                                        transition: 'background 0.15s'
-                                                    }}
-                                                >
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className="md:px-4 md:py-3 flex flex-wrap gap-2 md:justify-end items-center border-t border-gray-50 md:border-0 pt-3 md:pt-0">
+                                                <button onClick={() => openReassign(client)} className="flex-1 md:flex-none px-3 py-1.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-lg font-bold text-xs transition">
                                                     🔄 Reassign
                                                 </button>
-                                                <button
-                                                    onClick={() => handleToggleActive(client)}
-                                                    style={{
-                                                        padding: '6px 14px',
-                                                        background: isDeactivated ? 'var(--primary-light)' : '#fee2e2',
-                                                        color: isDeactivated ? 'var(--primary-dark)' : '#ef4444',
-                                                        border: 'none',
-                                                        borderRadius: 8,
-                                                        fontWeight: 700,
-                                                        fontSize: '0.82rem',
-                                                        cursor: 'pointer',
-                                                        whiteSpace: 'nowrap',
-                                                        transition: 'background 0.15s'
-                                                    }}
-                                                >
+                                                <button onClick={() => promptToggleActive(client)} className={`flex-1 md:flex-none px-3 py-1.5 border-none rounded-lg font-bold text-xs transition ${isDeactivated ? 'bg-primary-light text-primary-dark hover:bg-primary-light/80' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>
                                                     {isDeactivated ? '✅ Reactivate' : '🚫 Deactivate'}
                                                 </button>
-                                            </td>
-                                        </tr>
-                                    );
+                                            </div>
+                                        </div>
+                                    )
                                 })}
-                                {filtered.length === 0 && (
-                                    <tr>
-                                        <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#9ca3af' }}>No clients found.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                            </div>
+
+                            {filtered.length === 0 && (
+                                <div className="p-12 text-center text-gray-400 font-medium bg-white shadow-sm md:shadow-none rounded-xl md:rounded-none">No clients found.</div>
+                            )}
+                        </div>
                     </div>
 
-                    {!loading && (
-                        <div style={{ marginTop: 12, fontSize: '0.85rem', color: '#9ca3af' }}>
+                    {!loading && filtered.length > 0 && (
+                        <div className="mt-4 text-xs font-bold text-gray-400 text-center md:text-left">
                             Showing {filtered.length} of {clients.length} clients
                         </div>
                     )}
@@ -351,110 +347,51 @@ export default function AdminClientsPage() {
             </div>
 
             {/* Reassign Modal */}
-            {reassignClient && (
-                <div style={{
-                    position: 'fixed', inset: 0,
-                    background: 'rgba(0,0,0,0.45)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1000, padding: 20
-                }}>
-                    <div style={{
-                        background: '#fff',
-                        borderRadius: 20,
-                        width: '100%',
-                        maxWidth: 480,
-                        overflow: 'hidden',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
-                    }}>
-                        <div style={{ padding: '24px 28px', background: 'var(--primary-dark)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Reassign Client</h2>
-                                <div style={{ fontSize: '0.88rem', opacity: 0.85, marginTop: 2 }}>{reassignClient.company_name}</div>
-                            </div>
-                            <button
-                                onClick={() => setReassignClient(null)}
-                                style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.8rem', cursor: 'pointer', lineHeight: 1 }}
-                            >×</button>
-                        </div>
-
-                        <div style={{ padding: 28 }}>
-                            <div style={{ marginBottom: 8, fontSize: '0.9rem', color: '#374151', fontWeight: 600 }}>Current Agent</div>
-                            <div style={{
-                                padding: '10px 14px',
-                                background: '#f9fafb',
-                                borderRadius: 10,
-                                marginBottom: 24,
-                                fontSize: '0.9rem',
-                                color: '#111827',
-                                fontWeight: 600,
-                                border: '1px solid #e5e7eb'
-                            }}>
+            <Modal isOpen={isReassignModalOpen} onClose={() => setIsReassignModalOpen(false)} title="Reassign Client">
+                {reassignClient && (
+                    <form onSubmit={handleReassign} className="space-y-4">
+                        <div>
+                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Current Agent</div>
+                            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 font-bold mb-4">
                                 {reassignClient.profiles?.name ?? 'Unassigned'} {reassignClient.profiles?.email ? `· ${reassignClient.profiles.email}` : ''}
                             </div>
 
-                            <div style={{ marginBottom: 8, fontSize: '0.9rem', color: '#374151', fontWeight: 600 }}>Reassign To</div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Reassign To</label>
                             <select
+                                required
                                 value={selectedAgentId}
                                 onChange={e => setSelectedAgentId(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '11px 14px',
-                                    border: '1.5px solid #d1d5db',
-                                    borderRadius: 10,
-                                    fontSize: '0.95rem',
-                                    outline: 'none',
-                                    background: '#fff',
-                                    color: '#111827',
-                                    marginBottom: 28,
-                                    fontFamily: 'inherit',
-                                }}
+                                className="w-full px-3 py-2 border rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white text-gray-900 mb-6"
                             >
                                 <option value="">— Select an agent —</option>
                                 {agents.map(a => (
-                                    <option key={a.id} value={a.id}>
-                                        {a.name} ({a.email})
-                                    </option>
+                                    <option key={a.id} value={a.id}>{a.name} ({a.email})</option>
                                 ))}
                             </select>
-
-                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                                <button
-                                    onClick={() => setReassignClient(null)}
-                                    style={{
-                                        padding: '10px 22px',
-                                        border: '1.5px solid #d1d5db',
-                                        background: '#fff',
-                                        borderRadius: 10,
-                                        fontWeight: 600,
-                                        fontSize: '0.9rem',
-                                        cursor: 'pointer',
-                                        color: '#374151'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleReassign}
-                                    disabled={!selectedAgentId || reassigning}
-                                    style={{
-                                        padding: '10px 28px',
-                                        background: !selectedAgentId || reassigning ? '#9ca3af' : 'var(--primary)',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: 10,
-                                        fontWeight: 700,
-                                        fontSize: '0.9rem',
-                                        cursor: !selectedAgentId || reassigning ? 'not-allowed' : 'pointer',
-                                    }}
-                                >
-                                    {reassigning ? 'Reassigning…' : 'Confirm Reassign'}
-                                </button>
-                            </div>
                         </div>
+
+                        <div className="flex gap-3">
+                            <button type="button" onClick={() => setIsReassignModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={!selectedAgentId || reassigning} className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition disabled:opacity-50">
+                                {reassigning ? 'Reassigning...' : 'Confirm'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
+
+            {/* Confirm Actions Modal */}
+            <Modal isOpen={isConfirmModalOpen} onClose={() => setIsConfirmModalOpen(false)} title={confirmAction.title}>
+                <div className="space-y-6">
+                    <p className="text-gray-600">{confirmAction.message}</p>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => setIsConfirmModalOpen(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-lg transition">Cancel</button>
+                        <button onClick={() => { setIsConfirmModalOpen(false); confirmAction.onConfirm(); }} className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg transition">Confirm</button>
                     </div>
                 </div>
-            )}
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </Modal>
         </div>
     )
 }
