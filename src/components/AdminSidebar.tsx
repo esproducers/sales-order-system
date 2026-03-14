@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 export default function AdminSidebar() {
     const { user, profile } = useAuth()
     const pathname = usePathname()
+    const [isOpen, setIsOpen] = useState(false)
 
     const navItems = [
         { label: 'Admin Dashboard', icon: '📊', href: '/admin' },
@@ -19,105 +21,69 @@ export default function AdminSidebar() {
     ]
 
     return (
-        <aside style={{ width: 240, flexShrink: 0 }}>
-            {/* Admin Profile card */}
-            <div
-                style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    padding: '20px 16px',
-                    marginBottom: 12,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    borderLeft: '4px solid #111827' // Recognition for admin
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                        style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            background: '#111827',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            fontSize: '1.2rem',
-                        }}
-                    >
+        <aside className="w-full md:w-[240px] shrink-0">
+            {/* Mobile Dropdown Toggle (Hidden on desktop) */}
+            <div className="md:hidden mb-4">
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-full flex items-center justify-between bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100 text-gray-700 font-semibold"
+                >
+                    <span className="flex items-center gap-2">
+                        <span>☰</span> Admin Menu
+                    </span>
+                    <span className="text-gray-400">{isOpen ? '▲' : '▼'}</span>
+                </button>
+            </div>
+
+            {/* Sidebar Content (Toggled on mobile, always visible on desktop) */}
+            <div className={`${isOpen ? 'block' : 'hidden'} md:block mb-6 md:mb-0`}>
+                {/* Admin Profile card */}
+                <div className="bg-white rounded-xl p-4 mb-3 shadow-[0_1px_4px_rgba(0,0,0,0.06)] border-l-4 border-gray-900 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-lg shrink-0">
                         {(profile?.name || user?.user_metadata?.full_name || 'A')[0].toUpperCase()}
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="min-w-0">
+                        <div className="font-bold text-[0.95rem] overflow-hidden text-ellipsis whitespace-nowrap text-gray-900">
                             {profile?.name || user?.user_metadata?.full_name || 'Admin'}
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>System Administrator</div>
+                        <div className="text-[0.78rem] text-gray-500 font-semibold">System Administrator</div>
                     </div>
                 </div>
-            </div>
 
-            {/* Admin Nav menu */}
-            <div
-                style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                }}
-            >
-                {navItems.map((item) => {
-                    const active = pathname === item.href
-                    return (
-                        <Link
-                            key={item.label}
-                            href={item.href}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '13px 16px',
-                                textDecoration: 'none',
-                                background: active ? '#111827' : '#fff',
-                                color: active ? '#fff' : '#374151',
-                                borderBottom: '1px solid #f3f4f6',
-                                fontSize: '0.875rem',
-                                fontWeight: active ? 600 : 400,
-                                transition: 'all 0.15s',
-                            }}
-                        >
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span>{item.icon}</span>
-                                <span>{item.label}</span>
-                            </span>
-                            <span style={{ opacity: 0.5, fontSize: '0.75rem' }}>›</span>
-                        </Link>
-                    )
-                })}
-            </div>
+                {/* Admin Nav menu */}
+                <div className="bg-white rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+                    {navItems.map((item) => {
+                        const active = pathname === item.href
+                        return (
+                            <Link
+                                key={item.label}
+                                href={item.href}
+                                onClick={() => setIsOpen(false)}
+                                className={`flex items-center justify-between px-4 py-[13px] text-sm transition-all border-b border-gray-50 last:border-0 ${
+                                    active
+                                        ? 'bg-gray-900 text-white font-semibold'
+                                        : 'bg-white text-gray-700 font-normal hover:bg-gray-50'
+                                }`}
+                            >
+                                <span className="flex items-center gap-2.5">
+                                    <span>{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </span>
+                                <span className="opacity-50 text-[0.75rem]">›</span>
+                            </Link>
+                        )
+                    })}
+                </div>
 
-            {/* Return to Agent View */}
-            <Link
-                href="/dashboard"
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    marginTop: 12,
-                    padding: '12px 16px',
-                    background: '#fff',
-                    borderRadius: 12,
-                    color: 'var(--primary-dark)',
-                    textDecoration: 'none',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    border: '1px solid var(--primary-light)'
-                }}
-            >
-                <span>⬅️</span>
-                <span>Agent Dashboard</span>
-            </Link>
+                {/* Return to Agent View */}
+                <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2.5 mt-3 px-4 py-3 bg-white rounded-xl text-primary-dark font-semibold text-[0.85rem] shadow-[0_1px_4px_rgba(0,0,0,0.06)] border border-primary-light transition-colors hover:bg-gray-50"
+                >
+                    <span>⬅️</span>
+                    <span>Agent Dashboard</span>
+                </Link>
+            </div>
         </aside>
     )
 }

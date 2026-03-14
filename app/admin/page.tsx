@@ -274,37 +274,27 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+      <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
         <AdminSidebar />
-        <div style={{ flex: 1 }}>
-          <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div className="flex-1 min-w-0">
+          <div className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
             <div>
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.5px' }}>Admin Panel</h1>
-              <p style={{ color: '#6b7280', marginTop: 6, fontSize: '0.95rem' }}>Manage system, monitoring performance and sales team.</p>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 m-0 leading-tight tracking-tight">Admin Panel</h1>
+              <p className="text-gray-500 mt-2 text-[0.95rem]">Manage system, monitoring performance and sales team.</p>
             </div>
             <button
               onClick={handleCreateAgent}
-              style={{
-                padding: '11px 22px',
-                background: 'var(--primary)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                borderRadius: 10,
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(46,189,142,0.25)',
-              }}
+              className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white font-bold text-sm rounded-xl shadow-[0_4px_12px_rgba(46,189,142,0.25)] hover:bg-primary-dark transition-colors"
             >
               + Add New Agent
             </button>
           </div>
 
           {/* Stats Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-8">
             {[
               { label: 'New Orders', value: recentOrders.filter(o => !o.status || o.status.toLowerCase() === 'confirmed' || o.status === 'active').length, icon: '🚨', color: '#ffedd5', href: '#incoming-orders' },
               { label: 'New Agents', value: stats.totalPendingAgents, icon: '👤', color: '#fef9c3', href: '/admin/agent' },
@@ -347,10 +337,10 @@ export default function AdminPage() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 24 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
+            <div className="flex flex-col gap-6">
               {/* New Incoming Orders */}
-              <div id="incoming-orders" style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.02)' }}>
+              <div id="incoming-orders" className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden border border-gray-50">
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fffbeb' }}>
                   <h2 style={{ fontWeight: 800, fontSize: '1.1rem', margin: 0, color: '#d97706', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: '1.3rem' }}>🚨</span> New Incoming Orders

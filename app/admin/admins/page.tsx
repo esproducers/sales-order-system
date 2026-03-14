@@ -120,11 +120,11 @@ export default function AdminsPage() {
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
-            <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+            <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
                 <AdminSidebar />
-                <div style={{ flex: 1 }}>
+                <div className="flex-1 min-w-0">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                         <div>
                             <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>Portal Admins</h1>

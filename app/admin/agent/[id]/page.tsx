@@ -135,11 +135,11 @@ export default function AgentDetailPage() {
     const totalCommission = orders.reduce((s, o) => s + (o.commission_amount || 0), 0)
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
-            <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+            <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
                 <AdminSidebar />
-                <div style={{ flex: 1 }}>
+                <div className="flex-1 min-w-0">
                     {/* Header */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -190,7 +190,7 @@ export default function AgentDetailPage() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 24, alignItems: 'flex-start' }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-6 items-start">
 
                         {/* Left: Info / Edit Card */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

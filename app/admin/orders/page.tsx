@@ -96,18 +96,18 @@ export default function AdminOrdersPage() {
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <Navbar />
-            <div style={{ maxWidth: 1580, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 32 }}>
+            <div className="max-w-[1580px] mx-auto px-4 sm:px-6 py-8 w-full flex flex-col md:flex-row gap-6 md:gap-8 flex-1">
                 <AdminSidebar />
-                <div style={{ flex: 1 }}>
+                <div className="flex-1 min-w-0">
                     {/* Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                         <div>
                             <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0 }}>All Orders</h1>
                             <p style={{ color: '#6b7280', marginTop: 4, fontSize: '0.95rem' }}>All orders across every agent in the system</p>
                         </div>
-                        <div style={{ display: 'flex', gap: 16 }}>
+                        <div className="flex flex-wrap gap-4 w-full sm:w-auto">
                             <div style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                                 <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>Total Sales</div>
                                 <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#111827' }}>RM {totalSales.toFixed(2)}</div>
